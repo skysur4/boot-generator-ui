@@ -114,7 +114,7 @@ function createEmptyProject() {
             useSqlComments: false,
         },
 
-        hikariConfig: {
+        hikari: {
             driverClassName: null,
             jdbcUrl: null,
             username: null,
@@ -755,13 +755,13 @@ function ObjectArrayEditor({
                                 onClick={() =>
                                     removeItem(index)
                                 }
-                                className="
+                                className="inline-flex
                                     px-3 py-1 text-sm rounded
                                     bg-red-600 text-white
                                     hover:bg-red-700
                                 "
                             >
-                                <LayersMinus/>
+                                <LayersMinus className="mr-2"/>{`${toTitleCase(label)} ${index + 1}`}
                             </button>
                         </div>
                     </div>

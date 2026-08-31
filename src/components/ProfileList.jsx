@@ -46,7 +46,7 @@ export default function ProfileList({ selected, profiles, onSelect, addProfile }
                                 title === selected ? "dark:bg-gray-800" : "hover:dark:bg-zinc-800"
                             }`}
                         >
-                            <div className="text-lg text-mist-300">{title}</div>
+                            <div className="text-sm text-mist-300">{title}</div>
                             <div className="text-xs text-emerald-500">{profile.description || "-"}</div>
                             <div className="text-xs text-fuchsia-300">{dayjs(profile.editedAt).tz("Asia/Seoul").fromNow()}</div>
                         </li>

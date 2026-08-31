@@ -60,10 +60,11 @@ export default function App() {
 
     // 3. 새 프로필 기본 뼈대 추가
     const handleNewProfile = () => {
-        const newTitle = `New_Profile_${Date.now()}`;
+        const now = dayjs();
+        const newTitle = `New_Profile_${now.unix()}`;
         const newProfile = {
             "description": "새 프로필",
-            "editedAt": `${dayjs(Date.now()).format('YYYY.MM.DD HH:mm:ss')}`,
+            "editedAt": `${now.format('YYYY.MM.DD HH:mm:ss')}`,
             "buildVersion": {
                 "major": 0,
                 "minor": 0,
@@ -121,20 +122,24 @@ export default function App() {
         setEditingProfile(newProfile);
     };
 
+    const showToast = (message) => {
+        setToast({open: true, message: message});
+    };
+
     const handleCommit = async (profileName) => {
         try {
             setProfiles(prevData => ({
                 ...prevData,
                 [profileName]: editingProfile
             }));
+
+            showToast("Commit complete...");
+
             setPreviewOpen(true);
         } catch (error) {
             console.error("임시저장 실패:", error);
+            showToast("Commit failed...");
         }
-    };
-
-    const showToast = (message) => {
-        setToast({open: true, message: message});
     };
 
     const handleSave = async (profileName) => {
@@ -194,12 +199,14 @@ export default function App() {
         }
     };
 
-    const handleGenerate = async () => {
+    const handleGenerate = async (profileName) => {
         try {
-            await generateProfile(editingProfile.title);
-            alert("프로필 생성이 완료되었습니다.");
+            await generateProfile(profileName);
+            showToast("Generate complete...");
+
         } catch (error) {
-            console.error("생성 실패:", error);
+            console.error("Failed to generate" + error);
+            showToast("Generate failed...");
         }
     };
 
