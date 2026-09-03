@@ -6,6 +6,7 @@ import {
 import ToggleField from "./ToggleField";
 import DateTimeDisplay from "./DateTimeDisplay";
 import { toTitleCase } from '../common/StringUtils';
+import dayjs from "dayjs";
 
 /* =========================================================
  * Predefined
@@ -32,8 +33,12 @@ const SELECT_OPTIONS = {
 
     orm: [
         "JPA",
-        "MYBATIS"
-    ]
+        "MYBATIS",
+    ],
+
+    ormReactive: [
+        "R2DBC"
+    ],
 };
 
 /* =========================================================
@@ -99,19 +104,22 @@ function createEmptyExternalConnector() {
 }
 
 function createEmptyProject() {
+    const now = dayjs();
     return {
-        id: null,
-        basePath: "..",
-        name: "new-project",
-        group: "",
-        desc: "",
-        responsibilitySegregation: "BOTH",
+        name: `Backend_Project_${now.unix()}`,
+        desc: "백엔드 서비스",
+        localPort: 8081,
 
-        orm: {
-            type: "JPA",
-            showSql: false,
-            formatSql: false,
-            useSqlComments: false,
+        enabled: {
+            hexagonal: true,
+            orm: true,
+            event: false,
+            notice: false,
+            client: false,
+            swagger: true,
+            monitoring: true,
+            session: false,
+            authentication: false,
         },
 
         hikari: {
@@ -119,27 +127,20 @@ function createEmptyProject() {
             jdbcUrl: null,
             username: null,
             password: null,
+
+            schemaFilter: "public",
+            tableFilter: "%",
+            columnFilter: "%",
         },
 
-        schemaFilter: "public",
-        tableFilter: "%",
-        columnFilter: "%",
-        localPort: 8080,
+        orm: {
+            type: "JPA",
+            logSql: true,
+        },
+
+        responsibilitySegregation: "BOTH",
 
         interServers: [],
-
-        eventPublishers: [],
-
-        enabled: {
-            orm: false,
-            event: false,
-            notification: false,
-            swagger: false,
-            monitoring: false,
-            hexagonal: false,
-            authentication: false,
-            session: false,
-        },
     };
 }
 
@@ -509,7 +510,7 @@ function PrimitiveField({
                 label={toTitleCase(label)}
                 value={value}
                 options={
-                    SELECT_OPTIONS.orm
+                    value === "R2DBC" ? SELECT_OPTIONS.ormReactive : SELECT_OPTIONS.orm
                 }
                 name={path.join(".")}
                 onChange={onChange}

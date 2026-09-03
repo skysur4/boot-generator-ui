@@ -63,52 +63,68 @@ export default function App() {
         const now = dayjs();
         const newTitle = `New_Profile_${now.unix()}`;
         const newProfile = {
-            "description": "새 프로필",
             "editedAt": `${now.format('YYYY.MM.DD HH:mm:ss')}`,
-            "buildVersion": {
+            "description": "새 프로필",
+            "group": "example.com",
+            "version": {
                 "major": 0,
                 "minor": 0,
                 "patch": 1
             },
+            "basePath": "..",
+            "messageBroker": "APP",
             "authenticator": {
                 "type": "KEYCLOAK",
-                "name": "",
+                "name": null,
                 "serverUrl": "https://",
-                "clientId": "",
-                "clientSecret": "",
-                "realmName": ""
+                "clientId": null,
+                "clientSecret": null,
+                "realmName": null
             },
-            "messageBroker": "",
             "externalConnectors": [
             ],
             "projects": [
             ],
             "gateway": {
-                "basePath": "..",
-                "name": "",
-                "group": "",
-                "desc": "",
-                "localPort": "",
-                "interServers": [],
+                "name": "gateway",
+                "desc": "어플리케이션 게이트웨이",
+                "localPort": 8070,
+
                 "enabled": {
-                    "authentication": true,
-                    "hexagonal": true,
+                    "orm": false,
+                    "client": false,
                     "swagger": true,
                     "monitoring": true,
-                    "session": true
-                }
-            },
-            "notification": {
-                "basePath": "..",
-                "name": "",
-                "group": "",
-                "desc": "",
-                "localPort": "",
-                "interServers": [],
-                "enabled": {
+                    "session": true,
                     "authentication": true,
-                    "hexagonal": true,
-                    "swagger": true
+                },
+
+                "hikari": {
+                    "driverClassName": null,
+                    "jdbcUrl": null,
+                    "username": null,
+                    "password": null,
+
+                    "schemaFilter": "public",
+                    "tableFilter": "%",
+                    "columnFilter": "%",
+                },
+
+                "orm": {
+                    "type": "JPA",
+                    "logSql": true,
+                },
+
+                "interServers": [],
+            },
+
+            "notification": {
+                "name": "notification",
+                "desc": "SSE 알림",
+                "localPort": 8071,
+                "enabled": {
+                    "swagger": true,
+                    "monitoring": true,
                 }
             }
         };
@@ -127,24 +143,29 @@ export default function App() {
     };
 
     const handleCommit = async (profileName) => {
+        if(profileName === "template") {
+            showToast("Template NOT modifiable!");
+            return;
+        }
+
         try {
             setProfiles(prevData => ({
                 ...prevData,
                 [profileName]: editingProfile
             }));
 
-            showToast("Commit complete...");
+            showToast("Commit completed!");
 
             setPreviewOpen(true);
         } catch (error) {
             console.error("임시저장 실패:", error);
-            showToast("Commit failed...");
+            showToast("Commit failed!");
         }
     };
 
     const handleSave = async (profileName) => {
         if(profileName === "template") {
-            showToast("템플릿 수정 불가");
+            showToast("Template NOT pushable!");
             return;
         }
         try {
@@ -155,28 +176,28 @@ export default function App() {
                         [profileName]: editingProfile
                     }));
                 } else {
-                    showToast("Push cancelled...");
+                    showToast("Push cancelled!");
                     return;
                 }
             }
 
             await saveProfile(profileName, profiles[profileName]);
-            showToast("Push complete...");
+            showToast("Push completed!");
 
         } catch (error) {
             console.error("Failed to save" + error);
-            showToast("Push failed...");
+            showToast("Push failed!");
         }
     };
 
     const handleRemove = async (profileName) => {
         if(profileName === "template") {
-            showToast("템플릿 삭제 불가");
+            showToast("Template NOT removable!");
             return;
         }
 
         if (!window.confirm(`${profileName} 프로필을 삭제하시겠습니까?`)) {
-            showToast("Delete cancelled...");
+            showToast("Delete cancelled!");
             return;
         }
 
@@ -191,22 +212,22 @@ export default function App() {
             setSelected(null);
             setEditingProfile(null);
 
-            showToast("Delete complete...");
+            showToast("Delete completed!");
 
         } catch (error) {
             console.error("Failed to remove" + error);
-            showToast("Delete failed...");
+            showToast("Delete failed!");
         }
     };
 
     const handleGenerate = async (profileName) => {
         try {
             await generateProfile(profileName);
-            showToast("Generate complete...");
+            showToast("Generate completed!");
 
         } catch (error) {
             console.error("Failed to generate" + error);
-            showToast("Generate failed...");
+            showToast("Generate failed!");
         }
     };
 
