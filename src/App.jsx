@@ -54,7 +54,7 @@ export default function App() {
 
         const target = profiles[title];
         if (target) {
-            setEditingProfile(JSON.parse(JSON.stringify(target))); // 원본 보존을 위한 깊은 복사
+            setEditingProfile(JSON.parse(JSON.stringify(target)));
         }
     };
 
@@ -62,73 +62,11 @@ export default function App() {
     const handleNewProfile = () => {
         const now = dayjs();
         const newTitle = `New_Profile_${now.unix()}`;
-        const newProfile = {
-            "editedAt": `${now.format('YYYY.MM.DD HH:mm:ss')}`,
-            "description": "새 프로필",
-            "group": "example.com",
-            "version": {
-                "major": 0,
-                "minor": 0,
-                "patch": 1
-            },
-            "basePath": "..",
-            "messageBroker": "APP",
-            "authenticator": {
-                "type": "KEYCLOAK",
-                "name": null,
-                "serverUrl": "https://",
-                "clientId": null,
-                "clientSecret": null,
-                "realmName": null
-            },
-            "externalConnectors": [
-            ],
-            "projects": [
-            ],
-            "gateway": {
-                "name": "gateway",
-                "desc": "어플리케이션 게이트웨이",
-                "localPort": 8070,
-
-                "enabled": {
-                    "orm": false,
-                    "client": false,
-                    "swagger": true,
-                    "monitoring": true,
-                    "session": true,
-                    "authentication": true,
-                },
-
-                "datasource" : {
-                    "type": null,
-                    "addressAndPort": null,
-                    "databaseName" : null,
-                    "username": null,
-                    "password": null,
-
-                    "schemaFilter": "public",
-                    "tableFilter": "%",
-                    "columnFilter": "%",
-                },
-
-                "orm": {
-                    "type": "JPA",
-                    "logSql": true,
-                },
-
-                "interServers": [],
-            },
-
-            "notification": {
-                "name": "notification",
-                "desc": "SSE 알림",
-                "localPort": 8071,
-                "enabled": {
-                    "swagger": true,
-                    "monitoring": true,
-                }
-            }
-        };
+        const newProfile = JSON.parse(JSON.stringify(profiles['template'])); // 원본 보존을 위한 깊은 복사
+            // "editedAt": `${now.format('YYYY.MM.DD HH:mm:ss')}`,
+            // "description": "새 프로필",
+        newProfile['editedAt'] = `${now.format('YYYY.MM.DD HH:mm:ss')}`;
+        newProfile['description'] = "새 프로필";
 
         setProfiles(prevData => ({
             ...prevData,
