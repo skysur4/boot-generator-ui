@@ -99,9 +99,10 @@ export default function App() {
                     "authentication": true,
                 },
 
-                "hikari": {
-                    "driverClassName": null,
-                    "jdbcUrl": null,
+                "datasource" : {
+                    "type": null,
+                    "addressAndPort": null,
+                    "databaseName" : null,
                     "username": null,
                     "password": null,
 

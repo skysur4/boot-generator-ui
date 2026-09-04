@@ -39,6 +39,15 @@ const SELECT_OPTIONS = {
     ormReactive: [
         "R2DBC"
     ],
+
+    databases: [
+        "postgresql",
+        "mysql",
+        "mariadb",
+        "oracle",
+        "sqlserver",
+        "h2",
+    ],
 };
 
 /* =========================================================
@@ -122,9 +131,10 @@ function createEmptyProject() {
             authentication: false,
         },
 
-        hikari: {
-            driverClassName: null,
-            jdbcUrl: null,
+        datasource: {
+            type: null,
+            addressAndPort: null,
+            databaseName : null,
             username: null,
             password: null,
 
@@ -511,6 +521,27 @@ function PrimitiveField({
                 value={value}
                 options={
                     value === "R2DBC" ? SELECT_OPTIONS.ormReactive : SELECT_OPTIONS.orm
+                }
+                name={path.join(".")}
+                onChange={onChange}
+            />
+        );
+    }
+
+    /*
+     * databases
+     */
+    if (
+        path.length >= 2 &&
+        path[path.length - 2] === "datasource" &&
+        path[path.length - 1] === "type"
+    ) {
+        return (
+            <RadioField
+                label={toTitleCase(label)}
+                value={value}
+                options={
+                    SELECT_OPTIONS.databases
                 }
                 name={path.join(".")}
                 onChange={onChange}
