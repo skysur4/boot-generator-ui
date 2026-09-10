@@ -22,7 +22,8 @@ const SELECT_OPTIONS = {
     messageBroker: [
         "APP",
         "KAFKA",
-        "REDIS"
+        "REDIS",
+        "NATS"
     ],
 
     responsibilitySegregation: [
