@@ -108,29 +108,21 @@ export default function App() {
             return;
         }
         try {
-            let updatedProfiles = profiles;
+            const isSame = JSON.stringify(profiles[profileName]) === JSON.stringify(editingProfile);
 
-            if(profiles[profileName] !== editingProfile){
+            if(!isSame){
                 if(confirm("커밋되지 않은 변경 내용이 있습니다. 바로 저장하시겠습니까?")){
                     setProfiles(prevData => ({
                         ...prevData,
                         [profileName]: editingProfile
                     }));
-
-                    updatedProfiles = {
-                        ...profiles,
-                        [profileName]: editingProfile
-                    };
-
-                    // 3. React 상태 업데이트 예약
-                    setProfiles(updatedProfiles);
                 } else {
                     showToast("Push cancelled!");
                     return;
                 }
             }
 
-            await saveProfile(profileName, updatedProfiles[profileName]);
+            await saveProfile(profileName, editingProfile);
             showToast("Push completed!");
 
         } catch (error) {
@@ -171,7 +163,9 @@ export default function App() {
 
     const handleGenerate = async (profileName) => {
         try {
-            if(profiles[profileName] !== editingProfile){
+            const isSame = JSON.stringify(profiles[profileName]) === JSON.stringify(editingProfile);
+
+            if(!isSame){
                 alert("변경 사항이 있습니다. Push가 필요합니다.")
                 return;
             }

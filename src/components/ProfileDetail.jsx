@@ -19,6 +19,11 @@ const SELECT_OPTIONS = {
         "KAKAO"
     ],
 
+    aiType: [
+        "OPENAI",
+        "ANTHROPIC"
+    ],
+
     messageBroker: [
         "APP",
         "KAFKA",
@@ -471,6 +476,25 @@ function PrimitiveField({
                 label="Type"
                 value={value}
                 options={SELECT_OPTIONS.authenticatorType}
+                name={path.join(".")}
+                onChange={onChange}
+            />
+        );
+    }
+
+    /*
+     * ai.type
+     */
+    if (
+        path.length >= 2 &&
+        path[path.length - 2] === "ai" &&
+        path[path.length - 1] === "type"
+    ) {
+        return (
+            <RadioField
+                label="Type"
+                value={value}
+                options={SELECT_OPTIONS.aiType}
                 name={path.join(".")}
                 onChange={onChange}
             />
