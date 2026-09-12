@@ -20,6 +20,7 @@ const SELECT_OPTIONS = {
     ],
 
     aiType: [
+        "LOCAL",
         "OPENAI",
         "ANTHROPIC"
     ],
