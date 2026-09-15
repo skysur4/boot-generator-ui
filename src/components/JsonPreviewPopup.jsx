@@ -1,105 +1,65 @@
 import React from "react";
+import { maskSecrets } from "../config/rules";
+import { IconCode, IconX } from "./ui/icons";
 
-export default function JsonPreviewPopup({
-                                             open,
-                                             profile,
-                                             title = "JSON Preview",
-                                             onClose,
-                                         }) {
-    if (!open) {
-        return null;
-    }
+export default function JsonPreviewPopup({ open, profile, title = "JSON Preview", onClose }) {
+    const [showSecrets, setShowSecrets] = React.useState(false);
+    const [copied, setCopied] = React.useState(false);
 
-    const json = JSON.stringify(profile ?? {}, null, 2);
+    React.useEffect(() => {
+        if (!open) { setShowSecrets(false); setCopied(false); }
+    }, [open]);
+
+    React.useEffect(() => {
+        if (!open) return;
+        const onKey = (e) => { if (e.key === "Escape") onClose(); };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [open, onClose]);
+
+    const json = React.useMemo(() => {
+        const source = profile ?? {};
+        return JSON.stringify(showSecrets ? source : maskSecrets(source), null, 2);
+    }, [profile, showSecrets]);
+
+    const copy = async () => {
+        try {
+            await navigator.clipboard.writeText(JSON.stringify(profile ?? {}, null, 2));
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1600);
+        } catch {
+            setCopied(false);
+        }
+    };
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            onMouseDown={(e) => {
-                if (e.target === e.currentTarget) {
-                    onClose();
-                }
-            }}
-        >
-            <div
-                className="
-                    w-full max-w-5xl
-                    max-h-[90vh]
-                    flex flex-col
-                    rounded-lg shadow-xl
-                    bg-white dark:bg-zinc-900
-                "
-            >
-                {/* Header */}
-                <div
-                    className="
-                        flex items-center justify-between
-                        px-4 py-3
-                        border-b
-                        dark:border-zinc-700
-                    "
-                >
-                    <h2 className="text-lg font-semibold">
+        <>
+            <div className={`scrim ${open ? "on" : ""}`} onClick={onClose} />
+            <aside className={`drawer ${open ? "on" : ""}`} aria-hidden={!open}>
+                <div className="drawer-head">
+                    <IconCode size={16} style={{ color: "var(--fg-3)", flexShrink: 0 }} />
+                    <h3 style={{ fontSize: 13, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {title}
-                    </h2>
-
+                    </h3>
                     <button
                         type="button"
-                        onClick={onClose}
-                        className="
-                            px-2 py-1
-                            rounded
-                            text-gray-500
-                            hover:bg-gray-200
-                            dark:hover:bg-zinc-700
-                        "
+                        className="btn btn-sm"
+                        style={{ marginLeft: "auto" }}
+                        onClick={() => setShowSecrets((s) => !s)}
                     >
-                        ✕
+                        {showSecrets ? "비밀값 가리기" : "비밀값 표시"}
+                    </button>
+                    <button type="button" className="btn btn-sm" onClick={copy}>
+                        {copied ? "복사됨" : "복사"}
+                    </button>
+                    <button type="button" className="btn btn-icon btn-ghost" onClick={onClose} aria-label="닫기">
+                        <IconX size={15} />
                     </button>
                 </div>
-
-                {/* JSON */}
-                <div className="flex-1 overflow-auto p-4">
-                    <pre
-                        className="
-                            p-4
-                            rounded
-                            bg-slate-100
-                            dark:bg-zinc-950
-                            text-sm
-                            leading-6
-                            overflow-auto
-                            whitespace-pre
-                        "
-                    >
-                        {json}
-                    </pre>
+                <div className="drawer-body">
+                    <pre>{json}</pre>
                 </div>
-
-                {/* Footer */}
-                <div
-                    className="
-                        flex justify-end
-                        px-4 py-3
-                        border-t
-                        dark:border-zinc-700
-                    "
-                >
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="
-                            px-4 py-2
-                            rounded
-                            bg-blue-600
-                            text-white
-                            hover:bg-blue-700
-                        "
-                    >
-                        Close
-                    </button>
-                </div>
-            </div>
-        </div>
+            </aside>
+        </>
     );
 }

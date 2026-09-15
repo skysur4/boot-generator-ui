@@ -1,57 +1,99 @@
 import React from "react";
-import dayjs from 'dayjs';
+import dayjs from "dayjs";
+import "dayjs/locale/ko.js";
+import relativeTime from "dayjs/plugin/relativeTime";
+import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
 
-import 'dayjs/locale/ko.js';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import timezone from 'dayjs/plugin/timezone';
-import utc from 'dayjs/plugin/utc';
+import { IconSearch, IconLock, IconPlus } from "./ui/icons";
 
-import {
-    ListPlus
-} from "lucide-react";
-
-// Day.js 플러그인 및 로캘 설정
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(relativeTime);
-dayjs.locale('ko'); // 글로벌 로캘을 한국어로 변경
+dayjs.locale("ko");
 
-export default function ProfileList({ selected, profiles, onSelect, addProfile }) {
+const TEMPLATE = "template";
+
+function relative(value) {
+    if (!value) return "-";
+    const d = dayjs(value);
+    return d.isValid() ? d.tz("Asia/Seoul").fromNow() : "-";
+}
+
+function summarize(profile) {
+    if (!profile) return "";
+    const backends = Array.isArray(profile.projects) ? profile.projects.length : 0;
+    const parts = [`${backends} backend`];
+    if (profile.gateway) parts.push("+gateway");
+    if (profile.notification) parts.push("+notifier");
+    return parts.join(" · ");
+}
+
+export default function ProfileList({ selected, profiles, dirtyNames = [], onSelect, addProfile }) {
+    const [query, setQuery] = React.useState("");
+
+    const entries = React.useMemo(() => {
+        const all = Object.entries(profiles || {});
+        const q = query.trim().toLowerCase();
+        if (!q) return all;
+        return all.filter(([name, profile]) =>
+            name.toLowerCase().includes(q) ||
+            String(profile?.description ?? "").toLowerCase().includes(q)
+        );
+    }, [profiles, query]);
+
     return (
         <div className="h-full flex flex-col">
-            <div className="flex items-center justify-between px-3 py-2 border-b">
-                <h2 className="font-semibold">Profiles</h2>
-                <button
-                    type="button"
-                    onClick={addProfile}
-                    className="
-                        px-3 py-1 text-xs rounded
-                        bg-mauve-700 text-white
-                        hover:bg-mauve-900
-                    "
-                >
-                    <ListPlus/>
-                </button>
+            <div className="rail-head">
+                <div className="flex items-center justify-between mb-[9px]">
+                    <h2 className="rail-label">Profiles</h2>
+                    <span className="count-pill">{Object.keys(profiles || {}).length}</span>
+                </div>
+                <div className="search">
+                    <IconSearch size={14} />
+                    <input
+                        value={query}
+                        placeholder="프로필 검색…"
+                        onChange={(e) => setQuery(e.target.value)}
+                    />
+                </div>
             </div>
-            <div className="overflow-auto p-2">
-                {profiles.length === 0 && (
-                    <div className="text-gray-500">No profiles</div>
+
+            <div className="flex-1 overflow-y-auto p-2">
+                {entries.length === 0 && (
+                    <div className="empty" style={{ marginTop: 8 }}>
+                        {query ? "검색 결과 없음" : "프로필 없음"}
+                    </div>
                 )}
-                <ul>
-                    {Object.entries(profiles).map(([title, profile]) => (
-                        <li
-                            key={title}
-                            onClick={() => onSelect(title)}
-                            className={`cursor-pointer px-3 py-2 rounded mb-1 ${
-                                title === selected ? "dark:bg-gray-800" : "hover:dark:bg-zinc-800"
-                            }`}
+
+                {entries.map(([name, profile]) => {
+                    const isTemplate = name === TEMPLATE;
+                    const dirty = dirtyNames.includes(name);
+                    return (
+                        <button
+                            key={name}
+                            type="button"
+                            className={`pitem ${name === selected ? "active" : ""}`}
+                            onClick={() => onSelect(name)}
                         >
-                            <div className="text-sm text-mist-300">{title}</div>
-                            <div className="text-xs text-emerald-500">{profile.description || "-"}</div>
-                            <div className="text-xs text-fuchsia-300">{dayjs(profile.editedAt).tz("Asia/Seoul").fromNow()}</div>
-                        </li>
-                    ))}
-                </ul>
+                            <div className="flex items-center gap-[6px] mb-[3px]">
+                                <span className={`dot ${dirty ? "dot-dirty" : "dot-clean"}`} />
+                                <span className="pitem-name">{name}</span>
+                                {isTemplate && <IconLock size={12} style={{ color: "var(--fg-3)", marginLeft: "auto", flexShrink: 0 }} />}
+                            </div>
+                            <div className="pitem-desc">{profile?.description || "-"}</div>
+                            <div className="pitem-meta">
+                                {isTemplate ? "읽기 전용" : summarize(profile)} · {relative(profile?.editedAt)}
+                            </div>
+                        </button>
+                    );
+                })}
+            </div>
+
+            <div className="p-[10px] border-t" style={{ borderColor: "var(--line-soft)" }}>
+                <button type="button" className="btn btn-dashed btn-block" onClick={addProfile}>
+                    <IconPlus size={15} />새 프로필
+                </button>
             </div>
         </div>
     );

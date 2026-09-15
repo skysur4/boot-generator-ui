@@ -1,309 +1,276 @@
 import React, { useState, useEffect } from "react";
-import ProfileList from "./components/ProfileList";
-import ProfileDetail from "./components/ProfileDetail";
-import { fetchProfiles, saveProfile, deleteProfile, generateProfile } from "./api";
-import { useSystemTheme } from "./hooks/useSystemTheme";
-import JsonPreviewPopup from "./components/JsonPreviewPopup";
-import ToastAlert from "./components/ToastAlert";
-import {
-    Trash2,
-    GitCommitHorizontal,
-    CloudUpload,
-    WandSparkles,
-} from "lucide-react";
 import dayjs from "dayjs";
 
-export default function App() {
-    const { isDark } = useSystemTheme();
+import ProfileList from "./components/ProfileList";
+import ProfileDetail from "./components/ProfileDetail";
+import JsonPreviewPopup from "./components/JsonPreviewPopup";
+import ToastAlert from "./components/ToastAlert";
+import { useSystemTheme } from "./hooks/useSystemTheme";
+import { fetchProfiles, saveProfile, deleteProfile, generateProfile } from "./api";
+import {
+    IconLeaf, IconTrash, IconCommit, IconUpload, IconCode,
+    IconSparkles, IconMoon, IconSun,
+} from "./components/ui/icons";
 
-    const [profiles, setProfiles] = useState([]);
+const DEFAULT_PROFILE_NAME = "template";
+
+export default function App() {
+    const { isDark, toggleTheme } = useSystemTheme();
+
+    const [profiles, setProfiles] = useState({});
     const [selected, setSelected] = useState("");
     const [editingProfile, setEditingProfile] = useState(null);
-    const DEFAULT_PROFILE_NAME = "template";
 
-    // popup
-    const [previewOpen, setPreviewOpen] = React.useState(false);
-    const [toast, setToast] = React.useState({open: false, message: '처리되었습니다'});
+    const [previewOpen, setPreviewOpen] = useState(false);
+    const [toast, setToast] = useState({ open: false, message: "", tone: "ok" });
 
-    // 1. 초기 데이터 로드
-    useEffect(() => {
-        loadProfiles();
-    }, []);
+    const isTemplate = selected === DEFAULT_PROFILE_NAME;
+
+    /* ── 초기 로드 ─────────────────────────────────────── */
+    useEffect(() => { loadProfiles(); }, []);
 
     const loadProfiles = async () => {
         try {
             const data = await fetchProfiles();
+            const map = data || {};
+            setProfiles(map);
 
-            setProfiles(data || {});
-            if (data && Object.entries(data).length > 0 && !selected) {
-                if(selected === "") {
-                    setSelected(DEFAULT_PROFILE_NAME);
-                }
-                setEditingProfile(JSON.parse(JSON.stringify(data[DEFAULT_PROFILE_NAME]))); // 깊은 복사로 편집 상태 분리
-
-                handleSelect(DEFAULT_PROFILE_NAME);
+            const first = map[DEFAULT_PROFILE_NAME] ? DEFAULT_PROFILE_NAME : Object.keys(map)[0];
+            if (first) {
+                setSelected(first);
+                setEditingProfile(JSON.parse(JSON.stringify(map[first])));
             }
         } catch (error) {
             console.error("프로필 로드 실패:", error);
+            showToast("프로필을 불러오지 못했습니다", "error");
         }
     };
 
-    // 2. 프로필 목록에서 특정 항목 선택 시
+    const showToast = (message, tone = "ok") => setToast({ open: true, message, tone });
+
+    /* ── 미저장 변경 여부 ──────────────────────────────── */
+    const isDirty =
+        !!selected &&
+        !!editingProfile &&
+        JSON.stringify(profiles[selected]) !== JSON.stringify(editingProfile);
+
+    /* ── 선택 ──────────────────────────────────────────── */
     const handleSelect = (title) => {
-        setSelected(title);
+        if (title === selected) return;
+        if (isDirty && !window.confirm("커밋되지 않은 변경 내용이 있습니다. 이동하면 사라집니다. 계속할까요?")) return;
 
+        setSelected(title);
         const target = profiles[title];
-        if (target) {
-            setEditingProfile(JSON.parse(JSON.stringify(target)));
-        }
+        setEditingProfile(target ? JSON.parse(JSON.stringify(target)) : null);
     };
 
-    // 3. 새 프로필 기본 뼈대 추가
+    /* ── 새 프로필 ─────────────────────────────────────── */
     const handleNewProfile = () => {
+        const template = profiles[DEFAULT_PROFILE_NAME];
+        if (!template) {
+            showToast("template 프로필이 없어 새로 만들 수 없습니다", "error");
+            return;
+        }
         const now = dayjs();
         const newTitle = `New_Profile_${now.unix()}`;
-        const newProfile = JSON.parse(JSON.stringify(profiles['template'])); // 원본 보존을 위한 깊은 복사
-            // "editedAt": `${now.format('YYYY.MM.DD HH:mm:ss')}`,
-            // "description": "새 프로필",
-        newProfile['editedAt'] = `${now.format('YYYY.MM.DD HH:mm:ss')}`;
-        newProfile['description'] = "새 프로필";
+        const newProfile = JSON.parse(JSON.stringify(template));
+        newProfile.editedAt = now.format("YYYY.MM.DD HH:mm:ss");
+        newProfile.description = "새 프로필";
 
-        setProfiles(prevData => ({
-            ...prevData,
-            [newTitle]: newProfile
-        }));
-
+        setProfiles((prev) => ({ ...prev, [newTitle]: newProfile }));
         setSelected(newTitle);
         setEditingProfile(newProfile);
     };
 
-    const showToast = (message) => {
-        setToast({open: true, message: message});
-    };
-
-    const handleCommit = async (profileName) => {
-        if(profileName === "template") {
-            showToast("Template NOT modifiable!");
-            return;
-        }
-
+    /* ── Commit / Push / Delete / Generate ─────────────── */
+    const handleCommit = (profileName) => {
+        if (profileName === DEFAULT_PROFILE_NAME) return showToast("template 은 수정할 수 없습니다", "error");
         try {
-            setProfiles(prevData => ({
-                ...prevData,
-                [profileName]: editingProfile
-            }));
-
-            showToast("Commit completed!");
-
+            setProfiles((prev) => ({ ...prev, [profileName]: editingProfile }));
+            showToast("Commit completed");
             setPreviewOpen(true);
         } catch (error) {
             console.error("임시저장 실패:", error);
-            showToast("Commit failed!");
+            showToast("Commit failed", "error");
         }
     };
 
     const handleSave = async (profileName) => {
-        if(profileName === "template") {
-            showToast("Template NOT pushable!");
-            return;
-        }
+        if (profileName === DEFAULT_PROFILE_NAME) return showToast("template 은 Push 할 수 없습니다", "error");
         try {
-            const isSame = JSON.stringify(profiles[profileName]) === JSON.stringify(editingProfile);
-
-            if(!isSame){
-                if(confirm("커밋되지 않은 변경 내용이 있습니다. 바로 저장하시겠습니까?")){
-                    setProfiles(prevData => ({
-                        ...prevData,
-                        [profileName]: editingProfile
-                    }));
-                } else {
-                    showToast("Push cancelled!");
-                    return;
+            if (isDirty) {
+                if (!window.confirm("커밋되지 않은 변경 내용이 있습니다. 바로 저장하시겠습니까?")) {
+                    return showToast("Push cancelled");
                 }
+                setProfiles((prev) => ({ ...prev, [profileName]: editingProfile }));
             }
-
             await saveProfile(profileName, editingProfile);
-            showToast("Push completed!");
-
+            showToast("Push completed");
         } catch (error) {
-            console.error("Failed to save" + error);
-            showToast("Push failed!");
+            console.error("Failed to save", error);
+            showToast("Push failed", "error");
         }
     };
 
     const handleRemove = async (profileName) => {
-        if(profileName === "template") {
-            showToast("Template NOT removable!");
-            return;
-        }
-
-        if (!window.confirm(`${profileName} 프로필을 삭제하시겠습니까?`)) {
-            showToast("Delete cancelled!");
-            return;
-        }
+        if (profileName === DEFAULT_PROFILE_NAME) return showToast("template 은 삭제할 수 없습니다", "error");
+        if (!window.confirm(`${profileName} 프로필을 삭제하시겠습니까?`)) return showToast("Delete cancelled");
 
         try {
             await deleteProfile(profileName);
-
-            setProfiles(prevData => {
-                const { [profileName]: omitted, ...rest } = prevData;
+            setProfiles((prev) => {
+                const { [profileName]: _removed, ...rest } = prev;
                 return rest;
             });
-
-            setSelected(null);
+            setSelected("");
             setEditingProfile(null);
-
-            showToast("Delete completed!");
-
+            showToast("Delete completed");
         } catch (error) {
-            console.error("Failed to remove" + error);
-            showToast("Delete failed!");
+            console.error("Failed to remove", error);
+            showToast("Delete failed", "error");
         }
     };
 
     const handleGenerate = async (profileName) => {
         try {
-            const isSame = JSON.stringify(profiles[profileName]) === JSON.stringify(editingProfile);
-
-            if(!isSame){
-                alert("변경 사항이 있습니다. Push가 필요합니다.")
-                return;
-            }
+            if (isDirty) return showToast("변경 사항이 있습니다. Push 가 필요합니다", "error");
             await generateProfile(profileName);
-            showToast("Generate completed!");
-
+            showToast("Generate completed");
         } catch (error) {
-            console.error("Failed to generate" + error);
-            showToast("Generate failed!");
+            console.error("Failed to generate", error);
+            showToast("Generate failed", "error");
         }
     };
 
+    /* ── 편집 ──────────────────────────────────────────── */
     const handleTitleChange = (value) => {
-        setProfiles(prevMap => {
-            // 1. Check if the key exists
-            if (!(selected in prevMap)) return prevMap;
-
-            // 2. Destructure the old key out, and gather the rest
-            const { [selected]: targetValue, ...rest } = prevMap;
-
-            // 3. Return a new object with the rest of the keys plus the new key
-            return {
-                ...rest,
-                [value]: targetValue
-            };
+        setProfiles((prev) => {
+            if (!(selected in prev)) return prev;
+            const { [selected]: target, ...rest } = prev;
+            return { ...rest, [value]: target };
         });
-
         setSelected(value);
     };
 
     const handleProfileChange = (path, value) => {
-        setEditingProfile((prev) => {
-            return setByPath(prev, path, value);
-        });
+        setEditingProfile((prev) => setByPath(prev, path, value));
     };
 
     function setByPath(object, path, value) {
-        if (path.length === 0) {
-            return value;
-        }
+        if (path.length === 0) return value;
 
-        const result = Array.isArray(object)
-            ? [...object]
-            : { ...(object || {}) };
-
+        const result = Array.isArray(object) ? [...object] : { ...(object || {}) };
         const [key, ...rest] = path;
 
-        result[key] =
-            rest.length > 0
-                ? setByPath(result[key], rest, value)
-                : value;
+        if (rest.length === 0) {
+            if (value === undefined && !Array.isArray(result)) delete result[key];
+            else result[key] = value;
+            return result;
+        }
 
+        result[key] = setByPath(result[key], rest, value);
         return result;
     }
 
+    /* ── 렌더 ──────────────────────────────────────────── */
+    const disabled = !selected || !editingProfile;
+
     return (
-        <div className="min-h-screen flex flex-col dark:bg-zinc-900 dark:text-slate-50 transition-colors duration-300 dark:bg-slate-900 dark:text-slate-100">
-            {/* --- Preview Popup --- */}
+        <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
             <JsonPreviewPopup
                 open={previewOpen}
                 profile={editingProfile}
-                title={`${selected} - JSON Preview`}
+                title={`${selected} — JSON Preview`}
                 onClose={() => setPreviewOpen(false)}
             />
-            {/* 토스트 컴포넌트 장착 */}
             <ToastAlert
                 isOpen={toast.open}
                 message={toast.message}
-                onClose={() => setToast({...toast, open: false})}
+                tone={toast.tone}
+                onClose={() => setToast((t) => ({ ...t, open: false }))}
             />
-            {/* --- HEADER DIV --- */}
-            <header className="sticky top-0 z-50 w-full bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 shadow-sm">
-                <div className="max-w-7xl mx-auto flex items-center justify-between pl-1 pr-1">
-                    <div>
-                        <h1 className="text-xl font-bold tracking-tight">SpringBoot Generator</h1>
-                        <p className="text-xs dark:text-slate-400 dark:text-slate-400">Based on version 3.5.13</p>
+
+            {/* ── HEADER ── */}
+            <header className="topbar">
+                <div className="flex items-center gap-[10px] flex-shrink-0">
+                    <span className="brand-mark"><IconLeaf size={17} /></span>
+                    <span>
+                        <span className="brand-name" style={{ display: "block" }}>Boot Generator</span>
+                        <span className="brand-sub" style={{ display: "block" }}>Spring Boot 4.1.1</span>
+                    </span>
+                </div>
+
+                <div className="crumb">
+                    <span className="sep">/</span><b>profiles</b><span className="sep">/</span>
+                    <span className="cur">{selected || "—"}</span>
+                    {isDirty && <span className="badge badge-w badge-xs">● 변경됨</span>}
+                    {isTemplate && <span className="badge badge-xs">읽기 전용</span>}
+                </div>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                        type="button"
+                        className="btn btn-icon btn-ghost"
+                        onClick={toggleTheme}
+                        title={isDark ? "라이트 모드" : "다크 모드"}
+                        aria-label="테마 전환"
+                    >
+                        {isDark ? <IconMoon size={15} /> : <IconSun size={15} />}
+                    </button>
+
+                    <button
+                        type="button"
+                        className="btn btn-icon btn-danger"
+                        onClick={() => handleRemove(selected)}
+                        disabled={disabled || isTemplate}
+                        title="프로필 삭제"
+                        aria-label="프로필 삭제"
+                    >
+                        <IconTrash size={15} />
+                    </button>
+
+                    <span className="divider-v" />
+
+                    <div className="seg-group">
+                        <button type="button" className="btn" onClick={() => handleCommit(selected)} disabled={disabled || isTemplate}>
+                            <IconCommit size={15} />Commit
+                        </button>
+                        <button type="button" className="btn" onClick={() => handleSave(selected)} disabled={disabled || isTemplate}>
+                            <IconUpload size={15} />Push
+                        </button>
+                        <button type="button" className="btn" onClick={() => setPreviewOpen(true)} disabled={disabled}>
+                            <IconCode size={15} />JSON
+                        </button>
                     </div>
 
-                    {/* Header Action Elements */}
-                    <div className="flex items-center gap-4">
-                        <button className="inline-flex items-center gap-2 text-white rounded-lg
-                                            px-4 py-2 text-sm font-medium transition-colors
-                                            bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
-                                onClick={() => handleRemove(selected)}>
-                            <Trash2 size={16} /> Delete
-                        </button>
-                        <button className="inline-flex items-center gap-2 text-white rounded-lg
-                                            px-4 py-2 text-sm font-medium transition-colors
-                                            bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600"
-                                onClick={() => handleCommit(selected)}>
-                            <GitCommitHorizontal size={16} /> Commit
-                        </button>
-                        <button className="inline-flex items-center gap-2 text-white rounded-lg
-                                            px-4 py-2 text-sm font-medium transition-colors
-                                            bg-sky-600 hover:bg-sky-700 dark:bg-sky-500 dark:hover:bg-sky-600"
-                                onClick={() => handleSave(selected)}>
-                            <CloudUpload size={16} /> Push
-                        </button>
-                        <button className="inline-flex items-center gap-2 text-white rounded-lg
-                                            px-4 py-2 text-sm font-medium transition-colors
-                                            bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
-                                onClick={() => handleGenerate(selected)}>
-                            <WandSparkles size={16} /> Generate
-                        </button>
-                    </div>
+                    <button type="button" className="btn btn-primary" onClick={() => handleGenerate(selected)} disabled={disabled}>
+                        <IconSparkles size={15} />Generate
+                    </button>
                 </div>
             </header>
 
-            {/* --- MAIN CONTENT DIV --- */}
-            {/* MAIN CONTAINER */}
-            <main className="max-w-7xl flex-1 w-full mx-auto pt-1">
+            {/* ── BODY ── */}
+            <div className="shell">
+                <aside className="rail">
+                    <ProfileList
+                        selected={selected}
+                        profiles={profiles}
+                        dirtyNames={isDirty ? [selected] : []}
+                        onSelect={handleSelect}
+                        addProfile={handleNewProfile}
+                    />
+                </aside>
 
-                {/* CARD/PANEL BODY OUTER SHELL */}
-                <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm dark:bg-slate-800 dark:border-slate-700">
-
-                    {/* 🆕 THIS IS THE FIX: The layout engine directly holding your two divs */}
-                    <div className="flex flex-row items-stretch gap-4 w-full">
-                        {/* 좌측 사이드바: 프로필 목록 */}
-                        <div className="w-72 bg-slate-50 dark:bg-zinc-900 rounded shadow overflow-hidden flex-shrink-0">
-                            <ProfileList
-                                selected={selected}
-                                profiles={profiles}
-                                onSelect={handleSelect}
-                                addProfile={handleNewProfile}
-                            />
-                        </div>
-                        {/* 우측 본문: 프로필 상세 편집 및 수정 */}
-                        <div className="flex-1 bg-slate-50 dark:bg-zinc-900 rounded shadow flex flex-col min-h-[70vh]">
-                            <ProfileDetail
-                                title={selected}
-                                handleTitle={handleTitleChange}
-                                profile={editingProfile}
-                                handleChange={handleProfileChange}
-                            />
-                        </div>
-                    </div>
-                </div>
-            </main>
+                <main className="main">
+                    <ProfileDetail
+                        title={selected}
+                        profile={editingProfile}
+                        handleTitle={handleTitleChange}
+                        handleChange={handleProfileChange}
+                        readOnly={isTemplate}
+                    />
+                </main>
+            </div>
         </div>
     );
 }
