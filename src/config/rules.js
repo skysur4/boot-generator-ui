@@ -13,21 +13,23 @@ export const ROLE = {
 
 /* ── 모듈(enabled) 메타 ──────────────────────────────────── */
 export const MODULE_KEYS = [
-    "hexagonal", "orm", "ai", "event", "notice",
-    "client", "swagger", "monitoring", "session", "authentication",
+    "hexagonal", "authentication", "session", "roles", "orm", "ai",
+    "event", "notice", "client", "openapi", "swagger", "monitoring",
 ];
 
 export const MODULE_META = {
-    hexagonal:      { label: "Hexagonal",      desc: "포트/어댑터 구조" },
-    orm:            { label: "ORM",            desc: "영속성 계층" },
-    ai:             { label: "AI",             desc: "Spring AI" },
-    event:          { label: "Event",          desc: "도메인 이벤트" },
-    notice:         { label: "Notice",         desc: "알림 발송" },
-    client:         { label: "Client",         desc: "외부 호출" },
-    swagger:        { label: "Swagger",        desc: "API 문서" },
-    monitoring:     { label: "Monitoring",     desc: "Actuator" },
-    session:        { label: "Session",        desc: "세션 저장소" },
+    hexagonal:      { label: "Hexagonal",      desc: "헥사고널 프로젝트" },
     authentication: { label: "Authentication", desc: "인증 연동" },
+    session:        { label: "Session",        desc: "세션 사용" },
+    roles:          { label: "Roles",          desc: "롤 적용" },
+    orm:            { label: "ORM",            desc: "DB 사용" },
+    ai:             { label: "AI",             desc: "AI 연동" },
+    event:          { label: "Event",          desc: "이벤트 발송" },
+    notice:         { label: "Notice",         desc: "알림 발송" },
+    client:         { label: "Client",         desc: "외부 API 호출" },
+    openapi:        { label: "Open API",       desc: "API 외부 공유" },
+    swagger:        { label: "Swagger",        desc: "API 문서 사용" },
+    monitoring:     { label: "Monitoring",     desc: "Otel 연동" },
 };
 
 /* ── ORM / Datasource 선택지 ─────────────────────────────── */
@@ -61,7 +63,7 @@ export const ROLE_RULES = {
         sectionDesc: "배열 · 여러 개 추가 가능",
         isArray: true,
         modules: {
-            allowed: ["hexagonal", "orm", "ai", "event", "notice", "client", "swagger", "monitoring"],
+            allowed: ["hexagonal", "orm", "ai", "event", "notice", "openapi", "client", "swagger", "monitoring", "roles"],
             forcedOn: [],
         },
         orm: {
@@ -103,8 +105,8 @@ export const ROLE_RULES = {
         sectionDesc: "단일 객체 · 최대 1개",
         isArray: false,
         modules: {
-            allowed: ["orm", "ai", "client", "swagger", "monitoring", "session", "authentication"],
-            forcedOn: ["hexagonal"],
+            allowed: ["orm", "ai", "client", "swagger", "monitoring"],
+            forcedOn: ["hexagonal", "notice"],
         },
         orm: {
             options: ORM_REACTIVE,
