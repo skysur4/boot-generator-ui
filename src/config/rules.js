@@ -13,12 +13,11 @@ export const ROLE = {
 
 /* ── 모듈(enabled) 메타 ──────────────────────────────────── */
 export const MODULE_KEYS = [
-    "hexagonal", "authentication", "session", "roles", "orm", "ai",
-    "event", "notice", "client", "openapi", "swagger", "monitoring",
+    "authentication", "session", "roles", "orm", "ai", "vector",
+    "event", "notice", "client", "openapi", "monitoring", "hexagonal",
 ];
 
 export const MODULE_META = {
-    hexagonal:      { label: "Hexagonal",      desc: "헥사고널 프로젝트" },
     authentication: { label: "Authentication", desc: "인증 연동" },
     session:        { label: "Session",        desc: "세션 사용" },
     roles:          { label: "Roles",          desc: "롤 적용" },
@@ -28,8 +27,9 @@ export const MODULE_META = {
     notice:         { label: "Notice",         desc: "알림 발송" },
     client:         { label: "Client",         desc: "외부 API 호출" },
     openapi:        { label: "Open API",       desc: "API 외부 공유" },
-    swagger:        { label: "Swagger",        desc: "API 문서 사용" },
+    vector:         { label: "Vector",         desc: "Embedding 사용" },
     monitoring:     { label: "Monitoring",     desc: "Otel 연동" },
+    hexagonal:      { label: "Hexagonal",      desc: "헥사고널 패턴 사용" },
 };
 
 /* ── ORM / Datasource 선택지 ─────────────────────────────── */
@@ -63,7 +63,7 @@ export const ROLE_RULES = {
         sectionDesc: "배열 · 여러 개 추가 가능",
         isArray: true,
         modules: {
-            allowed: ["hexagonal", "orm", "ai", "event", "notice", "openapi", "client", "swagger", "monitoring", "roles"],
+            allowed: ["hexagonal", "orm", "ai", "event", "notice", "openapi", "client", "vector", "monitoring", "roles"],
             forcedOn: [],
         },
         orm: {
@@ -84,7 +84,7 @@ export const ROLE_RULES = {
         sectionDesc: "단일 객체 · 최대 1개",
         isArray: false,
         modules: {
-            allowed: ["orm", "ai", "client", "swagger", "monitoring", "session", "authentication"],
+            allowed: ["orm", "ai", "client", "vector", "monitoring", "session", "authentication"],
             forcedOn: ["hexagonal"],
         },
         orm: {
@@ -105,7 +105,7 @@ export const ROLE_RULES = {
         sectionDesc: "단일 객체 · 최대 1개",
         isArray: false,
         modules: {
-            allowed: ["orm", "ai", "client", "swagger", "monitoring"],
+            allowed: ["orm", "ai", "client", "vector", "monitoring"],
             forcedOn: ["hexagonal", "notice"],
         },
         orm: {

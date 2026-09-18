@@ -693,12 +693,12 @@ h1,h2,h3{margin:0;font-weight:600}
                   <label class="tog"><input type="checkbox" checked><span class="sw"></span><span class="tog-text"><span class="tog-name">Event</span><span class="tog-sub">도메인 이벤트</span></span></label>
                   <label class="tog"><input type="checkbox" checked><span class="sw"></span><span class="tog-text"><span class="tog-name">Notice</span><span class="tog-sub">알림 발송</span></span></label>
                   <label class="tog"><input type="checkbox"><span class="sw"></span><span class="tog-text"><span class="tog-name">Client</span><span class="tog-sub">외부 호출</span></span></label>
-                  <label class="tog"><input type="checkbox" checked><span class="sw"></span><span class="tog-text"><span class="tog-name">Swagger</span><span class="tog-sub">API 문서</span></span></label>
+                  <label class="tog"><input type="checkbox" checked><span class="sw"></span><span class="tog-text"><span class="tog-name">Vector</span><span class="tog-sub">API 문서</span></span></label>
                   <label class="tog"><input type="checkbox"><span class="sw"></span><span class="tog-text"><span class="tog-name">Monitoring</span><span class="tog-sub">Actuator</span></span></label>
                   <label class="tog dis" title="Backend 에서는 사용하지 않습니다"><input type="checkbox" disabled><span class="sw"></span><span class="tog-text"><span class="tog-name">Session</span><span class="tog-sub">Gateway 전용</span></span><svg class="padlock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></label>
                   <label class="tog dis" title="Backend 에서는 사용하지 않습니다"><input type="checkbox" disabled><span class="sw"></span><span class="tog-text"><span class="tog-name">Authentication</span><span class="tog-sub">Gateway 전용</span></span><svg class="padlock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></label>
                 </div>
-                <div class="hintline" style="margin-top:8px">Backend 는 <b style="color:var(--fg-2)">Hexagonal · ORM · AI · Event · Notice · Client · Swagger · Monitoring</b> 8개만 사용합니다.</div>
+                <div class="hintline" style="margin-top:8px">Backend 는 <b style="color:var(--fg-2)">Hexagonal · ORM · AI · Event · Notice · Client · Vector · Monitoring</b> 8개만 사용합니다.</div>
               </div></div>
 
               <div class="subgroup-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="6" rx="2"/><rect x="2" y="14" width="20" height="6" rx="2"/></svg>ORM</div>
@@ -802,12 +802,12 @@ h1,h2,h3{margin:0;font-weight:600}
                   <label class="tog dis" title="Gateway 에서는 사용하지 않습니다"><input type="checkbox" disabled><span class="sw"></span><span class="tog-text"><span class="tog-name">Event</span><span class="tog-sub">Backend 전용</span></span><svg class="padlock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></label>
                   <label class="tog dis" title="Gateway 에서는 사용하지 않습니다"><input type="checkbox" disabled><span class="sw"></span><span class="tog-text"><span class="tog-name">Notice</span><span class="tog-sub">Backend 전용</span></span><svg class="padlock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></label>
                   <label class="tog"><input type="checkbox" checked><span class="sw"></span><span class="tog-text"><span class="tog-name">Client</span><span class="tog-sub">외부 호출</span></span></label>
-                  <label class="tog"><input type="checkbox" checked><span class="sw"></span><span class="tog-text"><span class="tog-name">Swagger</span><span class="tog-sub">API 문서</span></span></label>
+                  <label class="tog"><input type="checkbox" checked><span class="sw"></span><span class="tog-text"><span class="tog-name">Vector</span><span class="tog-sub">API 문서</span></span></label>
                   <label class="tog"><input type="checkbox"><span class="sw"></span><span class="tog-text"><span class="tog-name">Monitoring</span><span class="tog-sub">Actuator</span></span></label>
                   <label class="tog"><input type="checkbox" checked><span class="sw"></span><span class="tog-text"><span class="tog-name">Session</span><span class="tog-sub">세션 저장소</span></span></label>
                   <label class="tog"><input type="checkbox" checked><span class="sw"></span><span class="tog-text"><span class="tog-name">Authentication</span><span class="tog-sub">인증 연동</span></span></label>
                 </div>
-                <div class="hintline" style="margin-top:8px">Gateway · Notification 은 <b style="color:var(--fg-2)">ORM · AI · Client · Swagger · Monitoring · Session · Authentication</b> 7개만 사용합니다.</div>
+                <div class="hintline" style="margin-top:8px">Gateway · Notification 은 <b style="color:var(--fg-2)">ORM · AI · Client · Vector · Monitoring · Session · Authentication</b> 7개만 사용합니다.</div>
               </div></div>
 
               <div class="subgroup-label">ORM <span class="opt">선택</span>
@@ -870,7 +870,7 @@ h1,h2,h3{margin:0;font-weight:600}
               <div class="acc-id"><div class="acc-name">proba-notifier</div><div class="acc-desc">백엔드 서비스</div></div>
               <div class="acc-summary">
                 <span class="badge v role">NOTIFIER</span>
-                <span class="badge mono">:8071</span><span class="badge g">hexagonal</span><span class="badge g">swagger</span>
+                <span class="badge mono">:8071</span><span class="badge g">hexagonal</span><span class="badge g">vector</span>
                 <span class="badge">DB 없음</span>
               </div>
               <svg class="acc-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
@@ -899,7 +899,7 @@ h1,h2,h3{margin:0;font-weight:600}
                   <label class="tog dis" title="Notification 에서는 사용하지 않습니다"><input type="checkbox" disabled><span class="sw"></span><span class="tog-text"><span class="tog-name">Event</span><span class="tog-sub">Backend 전용</span></span><svg class="padlock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></label>
                   <label class="tog dis" title="Notification 에서는 사용하지 않습니다"><input type="checkbox" disabled><span class="sw"></span><span class="tog-text"><span class="tog-name">Notice</span><span class="tog-sub">Backend 전용</span></span><svg class="padlock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></label>
                   <label class="tog"><input type="checkbox"><span class="sw"></span><span class="tog-text"><span class="tog-name">Client</span><span class="tog-sub">외부 호출</span></span></label>
-                  <label class="tog"><input type="checkbox" checked><span class="sw"></span><span class="tog-text"><span class="tog-name">Swagger</span><span class="tog-sub">API 문서</span></span></label>
+                  <label class="tog"><input type="checkbox" checked><span class="sw"></span><span class="tog-text"><span class="tog-name">Vector</span><span class="tog-sub">API 문서</span></span></label>
                   <label class="tog"><input type="checkbox"><span class="sw"></span><span class="tog-text"><span class="tog-name">Monitoring</span><span class="tog-sub">Actuator</span></span></label>
                   <label class="tog"><input type="checkbox"><span class="sw"></span><span class="tog-text"><span class="tog-name">Session</span><span class="tog-sub">세션 저장소</span></span></label>
                   <label class="tog"><input type="checkbox"><span class="sw"></span><span class="tog-text"><span class="tog-name">Authentication</span><span class="tog-sub">인증 연동</span></span></label>
