@@ -4,6 +4,7 @@ import OverviewPanel from "./panels/OverviewPanel";
 import ServicesPanel from "./panels/ServicesPanel";
 import ConnectorsPanel from "./panels/ConnectorsPanel";
 import { Badge } from "./ui/primitives";
+import { normalizeProfile } from "../config/rules";
 import { IconGrid, IconServers, IconPlug, IconClock } from "./ui/icons";
 
 const TABS = [
@@ -29,6 +30,12 @@ export default function ProfileDetail({
     const updateValue = React.useCallback((path, value) => {
         if (typeof handleChange === "function") handleChange(path, value);
     }, [handleChange]);
+
+    /* 서비스에서 Vector 를 켜면 루트 vector 블록을 만들어 둔다 */
+    React.useEffect(() => {
+        const fixed = normalizeProfile(profile);
+        if (fixed) updateValue([], fixed);
+    }, [profile, updateValue]);
 
     if (!profile) {
         return (

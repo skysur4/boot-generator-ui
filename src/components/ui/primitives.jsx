@@ -47,15 +47,18 @@ export function SectionHead({ icon, title, desc, path, tone = "" }) {
 }
 
 /* ── 서브그룹 라벨 ───────────────────────────────────────── */
-export function SubGroup({ icon, children, count, optional, action }) {
+export function SubGroup({ icon, children, count, optional, action, note }) {
     return (
-        <div className="subgroup">
-            {icon}
-            <span>{children}</span>
-            {count !== undefined && <span className="sg-cnt">{count}</span>}
-            {optional && <span className="sg-opt">선택</span>}
-            {action && <span className="sg-act">{action}</span>}
-        </div>
+        <>
+            <div className="subgroup">
+                {icon}
+                <span>{children}</span>
+                {count !== undefined && <span className="sg-cnt">{count}</span>}
+                {optional && <span className="sg-opt">선택</span>}
+                {action && <span className="sg-act">{action}</span>}
+            </div>
+            {note && <div className="subgroup-note">{note}</div>}
+        </>
     );
 }
 

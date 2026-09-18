@@ -7,6 +7,7 @@ import JsonPreviewPopup from "./components/JsonPreviewPopup";
 import ToastAlert from "./components/ToastAlert";
 import { useSystemTheme } from "./hooks/useSystemTheme";
 import { fetchProfiles, saveProfile, deleteProfile, generateProfile } from "./api";
+import { orderProfileKeys } from "./config/rules";
 import {
     IconLeaf, IconTrash, IconCommit, IconUpload, IconCode,
     IconSparkles, IconMoon, IconSun,
@@ -104,7 +105,7 @@ export default function App() {
                 }
                 setProfiles((prev) => ({ ...prev, [profileName]: editingProfile }));
             }
-            await saveProfile(profileName, editingProfile);
+            await saveProfile(profileName, orderProfileKeys(editingProfile));
             showToast("Push completed");
         } catch (error) {
             console.error("Failed to save", error);
@@ -179,7 +180,7 @@ export default function App() {
         <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
             <JsonPreviewPopup
                 open={previewOpen}
-                profile={editingProfile}
+                profile={orderProfileKeys(editingProfile)}
                 title={`${selected} — JSON Preview`}
                 onClose={() => setPreviewOpen(false)}
             />

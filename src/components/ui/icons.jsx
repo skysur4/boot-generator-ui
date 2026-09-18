@@ -159,6 +159,13 @@ export const IconWarn = (p) => (
 export const IconCheck = (p) => (
     <Svg {...p} strokeWidth={3}><path d="M20 6 9 17l-5-5" /></Svg>
 );
+export const IconVector = (p) => (
+    <Svg {...p}>
+        <circle cx="5" cy="6" r="2" /><circle cx="19" cy="6" r="2" />
+        <circle cx="12" cy="18" r="2" /><circle cx="12" cy="11" r="2" />
+        <path d="M6.7 7.2 10.5 10M17.3 7.2 13.5 10M12 13v3" />
+    </Svg>
+);
 export const IconMonitor = (p) => (
     <Svg {...p}><rect x="2" y="4" width="20" height="14" rx="2" /><path d="M8 20h8" /></Svg>
 );

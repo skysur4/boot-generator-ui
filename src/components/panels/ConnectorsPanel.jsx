@@ -24,8 +24,8 @@ export default function ConnectorsPanel({ profile, onChange }) {
         <div className="panel">
             <div style={{ maxWidth: 820, marginBottom: 16 }}>
                 <Note icon={<IconInfo size={15} />}>
-                    <b>커넥터는 아래 중 하나라도 사용할 때 필요합니다.</b> 쓰지 않는 항목은 등록해 두어도{" "}
-                    <b>무시될 뿐 오류를 내지 않습니다.</b>
+                    <b>커넥터는 아래 중 하나라도 사용할 때 필요합니다.</b> 관련 설정이 켜진 커넥터는{" "}
+                    <b>색으로 표시</b>되고, 꺼진 것은 흐리게 보입니다 — 흐려도 오류는 아니고 그냥 무시됩니다.
                     <div
                         style={{
                             display: "grid",
@@ -40,7 +40,8 @@ export default function ConnectorsPanel({ profile, onChange }) {
                             Message Broker 가 <span className="mono">KAFKA · REDIS · NATS</span> 중 하나일 때 — 해당 브로커의 주소·포트
                         </RuleRow>
                         <RuleRow badge={<span className="why why-v"><IconPulse size={11} />Monitoring</span>}>
-                            서비스 중 하나라도 <span className="mono">monitoring</span> 을 켰을 때 — OTel 로그 수집 서버
+                            서비스 중 하나라도 <span className="mono">monitoring</span> 을 켰을 때 — OTel 컬렉터
+                            (트레이스·메트릭·로그 수집). Message Broker 와는 무관합니다
                         </RuleRow>
                         <RuleRow badge={<span className="why why-g"><IconMonitor size={11} />Frontend</span>}>
                             프론트엔드를 함께 띄울 때 — CORS 허용 및 게이트웨이 라우팅 대상
@@ -82,7 +83,10 @@ export default function ConnectorsPanel({ profile, onChange }) {
                                         setAt(i, "port", raw === "" ? (wasString ? "" : null) : (wasString ? raw : Number(raw)));
                                     }}
                                 />
-                                <span className={`why ${purpose.tone ? `why-${purpose.tone}` : ""}`} title={purpose.title}>
+                                <span
+                                    className={`why ${purpose.active && purpose.tone ? `why-${purpose.tone}` : "why-off"}`}
+                                    title={purpose.title}
+                                >
                                     {purpose.label}
                                 </span>
                             </ListRow>

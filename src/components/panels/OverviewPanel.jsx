@@ -1,15 +1,24 @@
 import React from "react";
 import {
     AUTHENTICATOR_TYPES, AI_TYPES, MESSAGE_BROKERS,
+    VECTOR_PROVIDERS, VECTOR_PROVIDER_META, EMBEDDING_MODELS, findEmbeddingModel,
 } from "../../config/rules";
 import { Card, CardHead, CardBody, Note } from "../ui/primitives";
 import { Field, TextField, NumberField, SecretField, SegmentedField, Toggle } from "../ui/fields";
-import { IconFile, IconLock, IconSparkles, IconPulse, IconInfo } from "../ui/icons";
+import { IconFile, IconLock, IconSparkles, IconPulse, IconInfo, IconVector, IconWarn } from "../ui/icons";
 
 export default function OverviewPanel({ profile, onChange }) {
     const version = profile.version || {};
     const authenticator = profile.authenticator || {};
     const ai = profile.ai || {};
+
+    const vector = profile.vector || {};
+    const providerMeta = VECTOR_PROVIDER_META[vector.type] || VECTOR_PROVIDER_META.LOCAL;
+    const models = EMBEDDING_MODELS[vector.type] || EMBEDDING_MODELS.LOCAL;
+    const modelMeta = findEmbeddingModel(vector.type, vector.model);
+    const dimOptions = modelMeta ? modelMeta.dims : [vector.dimensions ?? 384];
+    const dimLocked = dimOptions.length <= 1;
+    const dimChanged = !!modelMeta && vector.dimensions !== modelMeta.dims[0];
 
     const isKeycloak = authenticator.type === "KEYCLOAK";
     const isLocalAi = ai.type === "LOCAL";
@@ -122,6 +131,93 @@ export default function OverviewPanel({ profile, onChange }) {
                             onChange={(v) => onChange(["ai", "apiKey"], v)}
                             hint="Push 시 서버로 전송됩니다. 화면에서는 기본 마스킹."
                         />
+                    </CardBody>
+                </Card>
+
+                {/* Vector Provider */}
+                <Card>
+                    <CardHead icon={<IconVector size={13} />} title="Vector Provider" hint="vector" />
+                    <CardBody>
+                        <SegmentedField
+                            label="Type"
+                            name="vector-type"
+                            value={vector.type}
+                            options={VECTOR_PROVIDERS}
+                            onChange={(v) => {
+                                const first = EMBEDDING_MODELS[v]?.[0];
+                                onChange(["vector", "type"], v);
+                                if (first) {
+                                    onChange(["vector", "model"], first.id);
+                                    onChange(["vector", "dimensions"], first.dims[0]);
+                                }
+                            }}
+                            hint={providerMeta.desc}
+                        />
+
+                        <Field label="Model">
+                            <div className="chipset">
+                                {models.map((m) => (
+                                    <label key={m.id} className={`chip ${vector.model === m.id ? "on" : ""}`} title={m.desc}>
+                                        <input
+                                            type="radio"
+                                            name="vector-model"
+                                            checked={vector.model === m.id}
+                                            onChange={() => {
+                                                onChange(["vector", "model"], m.id);
+                                                onChange(["vector", "dimensions"], m.dims[0]);
+                                            }}
+                                        />
+                                        <span className="chip-dot" />
+                                        {m.id}
+                                        <span className="chip-sub">{m.dims[0]}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </Field>
+
+                        <SegmentedField
+                            label="Dimensions"
+                            name="vector-dims"
+                            tag={dimLocked ? "고정" : "축소 가능"}
+                            tagTone={dimLocked ? "" : "v"}
+                            value={String(vector.dimensions ?? "")}
+                            options={dimOptions.map(String)}
+                            disabledOptions={dimLocked ? [] : []}
+                            onChange={(v) => onChange(["vector", "dimensions"], Number(v))}
+                            hint={
+                                dimLocked
+                                    ? `${vector.model} 은 ${dimOptions[0]} 차원 고정입니다.`
+                                    : "기본값이 맨 앞입니다. 줄이면 저장 용량·검색 비용이 줄고 정확도가 조금 떨어집니다."
+                            }
+                        />
+
+                        {dimChanged && (
+                            <Note warn icon={<IconWarn size={15} />}>
+                                차원을 바꾸면 <b>이미 만들어진 벡터 컬럼과 어긋납니다.</b> 저장소를 다시 초기화하고
+                                기존 임베딩을 재생성해야 합니다.
+                            </Note>
+                        )}
+
+                        <TextField
+                            label="URL"
+                            value={vector.url}
+                            placeholder={providerMeta.urlHint}
+                            onChange={(v) => onChange(["vector", "url"], v)}
+                            hint={providerMeta.urlHint}
+                        />
+
+                        {providerMeta.needsApiKey && (
+                            <SecretField
+                                label="API Key"
+                                value={vector.apiKey}
+                                onChange={(v) => onChange(["vector", "apiKey"], v)}
+                            />
+                        )}
+
+                        <div className="f-hint">
+                            채팅 모델(AI Provider)과 임베딩 공급자는 서로 묶이지 않습니다. 예를 들어 채팅은 ANTHROPIC,
+                            임베딩은 VOYAGE 조합이 가능합니다.
+                        </div>
                     </CardBody>
                 </Card>
 
