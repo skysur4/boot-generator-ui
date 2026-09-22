@@ -1,10 +1,14 @@
 import React from "react";
 import {
     AUTHENTICATOR_TYPES, AI_TYPES, MESSAGE_BROKERS,
-    VECTOR_PROVIDERS, VECTOR_PROVIDER_META, EMBEDDING_MODELS, findEmbeddingModel,
+    EMBEDDER_TYPES, EMBEDDER_META, EMBEDDING_MODELS, findEmbeddingModel,
+    SIMILARITY_MIN, SIMILARITY_MAX,
 } from "../../config/rules";
 import { Card, CardHead, CardBody, Note } from "../ui/primitives";
-import { Field, TextField, NumberField, SecretField, SegmentedField, Toggle } from "../ui/fields";
+import {
+    Field, TextField, NumberField, SecretField, SegmentedField, Toggle,
+    TextAreaField, RangeField,
+} from "../ui/fields";
 import { IconFile, IconLock, IconSparkles, IconPulse, IconInfo, IconVector, IconWarn } from "../ui/icons";
 
 export default function OverviewPanel({ profile, onChange }) {
@@ -12,13 +16,11 @@ export default function OverviewPanel({ profile, onChange }) {
     const authenticator = profile.authenticator || {};
     const ai = profile.ai || {};
 
-    const vector = profile.vector || {};
-    const providerMeta = VECTOR_PROVIDER_META[vector.type] || VECTOR_PROVIDER_META.LOCAL;
-    const models = EMBEDDING_MODELS[vector.type] || EMBEDDING_MODELS.LOCAL;
-    const modelMeta = findEmbeddingModel(vector.type, vector.model);
-    const dimOptions = modelMeta ? modelMeta.dims : [vector.dimensions ?? 384];
-    const dimLocked = dimOptions.length <= 1;
-    const dimChanged = !!modelMeta && vector.dimensions !== modelMeta.dims[0];
+    const embedder = profile.embedder || {};
+    const embedderMeta = EMBEDDER_META[embedder.type] || EMBEDDER_META.LOCAL;
+    const presets = EMBEDDING_MODELS[embedder.type] || EMBEDDING_MODELS.LOCAL;
+    const modelMeta = findEmbeddingModel(embedder.type, embedder.model);
+    const dimMismatch = !!modelMeta && !modelMeta.dims.includes(Number(embedder.dimensions));
 
     const isKeycloak = authenticator.type === "KEYCLOAK";
     const isLocalAi = ai.type === "LOCAL";
@@ -131,92 +133,118 @@ export default function OverviewPanel({ profile, onChange }) {
                             onChange={(v) => onChange(["ai", "apiKey"], v)}
                             hint="Push 시 서버로 전송됩니다. 화면에서는 기본 마스킹."
                         />
+                        <TextAreaField
+                            label="System Prompt"
+                            rows={3}
+                            value={ai.systemPrompt}
+                            placeholder="예: 당신은 IT QA 전문가입니다"
+                            onChange={(v) => onChange(["ai", "systemPrompt"], v)}
+                            hint="생성되는 서비스의 기본 시스템 프롬프트로 들어갑니다."
+                        />
                     </CardBody>
                 </Card>
 
-                {/* Vector Provider */}
+                {/* Embedder */}
                 <Card>
-                    <CardHead icon={<IconVector size={13} />} title="Vector Provider" hint="vector" />
+                    <CardHead icon={<IconVector size={13} />} title="Embedder" hint="embedder" />
                     <CardBody>
                         <SegmentedField
                             label="Type"
-                            name="vector-type"
-                            value={vector.type}
-                            options={VECTOR_PROVIDERS}
+                            name="embedder-type"
+                            value={embedder.type}
+                            options={EMBEDDER_TYPES}
                             onChange={(v) => {
                                 const first = EMBEDDING_MODELS[v]?.[0];
-                                onChange(["vector", "type"], v);
+                                onChange(["embedder", "type"], v);
                                 if (first) {
-                                    onChange(["vector", "model"], first.id);
-                                    onChange(["vector", "dimensions"], first.dims[0]);
+                                    onChange(["embedder", "model"], first.id);
+                                    onChange(["embedder", "dimensions"], first.dims[0]);
                                 }
                             }}
-                            hint={providerMeta.desc}
+                            hint={embedderMeta.desc}
                         />
 
-                        <Field label="Model">
-                            <div className="chipset">
-                                {models.map((m) => (
-                                    <label key={m.id} className={`chip ${vector.model === m.id ? "on" : ""}`} title={m.desc}>
-                                        <input
-                                            type="radio"
-                                            name="vector-model"
-                                            checked={vector.model === m.id}
-                                            onChange={() => {
-                                                onChange(["vector", "model"], m.id);
-                                                onChange(["vector", "dimensions"], m.dims[0]);
-                                            }}
-                                        />
+                        <TextField
+                            label="URL"
+                            value={embedder.url}
+                            placeholder={embedderMeta.urlHint}
+                            onChange={(v) => onChange(["embedder", "url"], v)}
+                        />
+
+                        <SecretField
+                            label="API Key"
+                            value={embedder.apiKey}
+                            onChange={(v) => onChange(["embedder", "apiKey"], v)}
+                        />
+
+                        <Field
+                            label="Model"
+                            hint="서버에 올린 모델 이름을 그대로 적습니다. 아래 칩을 누르면 모델과 차원이 함께 채워집니다."
+                        >
+                            <input
+                                className="input"
+                                value={embedder.model ?? ""}
+                                placeholder="text-embedding-bge-m3"
+                                onChange={(e) => onChange(["embedder", "model"], e.target.value)}
+                            />
+                            <div className="chipset" style={{ marginTop: 7 }}>
+                                {presets.map((m) => (
+                                    <button
+                                        key={m.id}
+                                        type="button"
+                                        className={`chip ${embedder.model === m.id ? "on" : ""}`}
+                                        title={m.desc}
+                                        onClick={() => {
+                                            onChange(["embedder", "model"], m.id);
+                                            onChange(["embedder", "dimensions"], m.dims[0]);
+                                        }}
+                                    >
                                         <span className="chip-dot" />
                                         {m.id}
                                         <span className="chip-sub">{m.dims[0]}</span>
-                                    </label>
+                                    </button>
                                 ))}
                             </div>
                         </Field>
 
-                        <SegmentedField
+                        <NumberField
                             label="Dimensions"
-                            name="vector-dims"
-                            tag={dimLocked ? "고정" : "축소 가능"}
-                            tagTone={dimLocked ? "" : "v"}
-                            value={String(vector.dimensions ?? "")}
-                            options={dimOptions.map(String)}
-                            disabledOptions={dimLocked ? [] : []}
-                            onChange={(v) => onChange(["vector", "dimensions"], Number(v))}
+                            width={150}
+                            value={embedder.dimensions}
+                            onChange={(v) => onChange(["embedder", "dimensions"], v)}
                             hint={
-                                dimLocked
-                                    ? `${vector.model} 은 ${dimOptions[0]} 차원 고정입니다.`
-                                    : "기본값이 맨 앞입니다. 줄이면 저장 용량·검색 비용이 줄고 정확도가 조금 떨어집니다."
+                                modelMeta
+                                    ? `${modelMeta.id} 는 ${modelMeta.dims.join(" · ")} 차원을 지원합니다.`
+                                    : "모델이 내놓는 차원과 반드시 같아야 합니다."
                             }
                         />
 
-                        {dimChanged && (
+                        {dimMismatch && (
                             <Note warn icon={<IconWarn size={15} />}>
-                                차원을 바꾸면 <b>이미 만들어진 벡터 컬럼과 어긋납니다.</b> 저장소를 다시 초기화하고
-                                기존 임베딩을 재생성해야 합니다.
+                                <b>{modelMeta.id}</b> 이(가) 지원하지 않는 차원입니다
+                                (지원: {modelMeta.dims.join(" · ")}). 이미 적재한 벡터와 어긋나면 검색이
+                                실패하거나 저장소를 다시 만들어야 합니다.
                             </Note>
                         )}
 
-                        <TextField
-                            label="URL"
-                            value={vector.url}
-                            placeholder={providerMeta.urlHint}
-                            onChange={(v) => onChange(["vector", "url"], v)}
-                            hint={providerMeta.urlHint}
+                        <RangeField
+                            label="Similarity Threshold"
+                            unit="%"
+                            min={SIMILARITY_MIN}
+                            max={SIMILARITY_MAX}
+                            value={embedder.similarity}
+                            onChange={(v) => onChange(["embedder", "similarity"], v)}
+                            marks={[
+                                { value: 50, label: "50 넓게" },
+                                { value: 70, label: "70 기본" },
+                                { value: 85, label: "85 엄격" },
+                            ]}
+                            hint="검색 결과로 채택할 최소 유사도입니다. 높일수록 정확하지만 결과가 줄어듭니다."
                         />
 
-                        {providerMeta.needsApiKey && (
-                            <SecretField
-                                label="API Key"
-                                value={vector.apiKey}
-                                onChange={(v) => onChange(["vector", "apiKey"], v)}
-                            />
-                        )}
-
                         <div className="f-hint">
-                            채팅 모델(AI Provider)과 임베딩 공급자는 서로 묶이지 않습니다. 예를 들어 채팅은 ANTHROPIC,
-                            임베딩은 VOYAGE 조합이 가능합니다.
+                            채팅 모델(AI Provider)과 임베딩 공급자는 서로 묶이지 않습니다. OpenAI 외 공급자(Voyage 등)는{" "}
+                            <b>LOCAL</b> 로 두고 URL · API Key 를 채웁니다. 서비스의 <b>Embedding</b> 토글이 하나라도 켜져 있을 때 사용됩니다.
                         </div>
                     </CardBody>
                 </Card>

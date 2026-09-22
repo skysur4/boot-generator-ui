@@ -68,6 +68,71 @@ export function NumberField({ label, value, onChange, hint, disabled, width }) {
     );
 }
 
+/* ── 여러 줄 텍스트 ──────────────────────────────────────── */
+export function TextAreaField({ label, value, onChange, hint, rows = 3, placeholder, disabled }) {
+    return (
+        <Field label={label} hint={hint}>
+            <textarea
+                className="input textarea input-ui"
+                rows={rows}
+                value={value ?? ""}
+                placeholder={placeholder}
+                disabled={disabled}
+                onChange={(e) => onChange(e.target.value)}
+            />
+        </Field>
+    );
+}
+
+/* ── 슬라이더 (0~100 같은 정수 구간) ─────────────────────── */
+export function RangeField({
+    label, value, onChange, hint,
+    min = 0, max = 100, step = 1, unit = "", marks = [],
+}) {
+    const current = Number.isFinite(Number(value)) ? Number(value) : min;
+    return (
+        <Field label={label} hint={hint}>
+            <div className="range-row">
+                <input
+                    type="range"
+                    className="range"
+                    min={min}
+                    max={max}
+                    step={step}
+                    value={current}
+                    onChange={(e) => onChange(Number(e.target.value))}
+                />
+                <input
+                    className="input range-num"
+                    inputMode="numeric"
+                    value={current}
+                    onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw !== "" && !/^\d*$/.test(raw)) return;
+                        const n = raw === "" ? min : Number(raw);
+                        onChange(Math.min(max, Math.max(min, n)));
+                    }}
+                />
+                {unit && <span className="range-unit">{unit}</span>}
+            </div>
+            {marks.length > 0 && (
+                <div className="range-marks">
+                    {marks.map((m) => (
+                        <button
+                            key={m.value}
+                            type="button"
+                            className={`range-mark ${current === m.value ? "on" : ""}`}
+                            onClick={() => onChange(m.value)}
+                        >
+                            {m.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </Field>
+    );
+}
+
 /* ── 비밀값 ──────────────────────────────────────────────── */
 export function SecretField({ label, value, onChange, hint, disabled }) {
     const [shown, setShown] = React.useState(false);

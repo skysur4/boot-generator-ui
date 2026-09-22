@@ -1,15 +1,17 @@
 import React from "react";
 import {
-    ROLE, ROLE_RULES, MODULE_KEYS, MODULE_META, moduleState,
+    ROLE, ROLE_RULES, MODULE_KEYS, MODULE_META, moduleStateFor,
+    MODULE_EXCLUSIVE, MODULE_IMPLIES, moduleState,
     DATABASES, RESPONSIBILITY_SEGREGATION,
-    VECTOR_STORES, findVectorStore, VECTOR_INDEX_TYPE, VECTOR_DISTANCE_TYPE,
+    VECTOR_STORES,
     createInterServer,
 } from "../config/rules";
 import { Card, CardHead, CardBody, SubGroup, Accordion, EmptyBox, AddButton, Note, Badge } from "./ui/primitives";
+import { useConfirm } from "./ConfirmDialog";
 import { Field, TextField, NumberField, SecretField, SegmentedField, ChipRadioField, Toggle, ListRow } from "./ui/fields";
 import {
     IconBox, IconGateway, IconBell, IconDatabase, IconServers, IconFilter,
-    IconLayers, IconPlus, IconX, IconTrash, IconWarn, IconVector, IconLock,
+    IconLayers, IconPlus, IconTrash, IconWarn, IconVector,
 } from "./ui/icons";
 
 const ROLE_ICON = {
@@ -104,92 +106,85 @@ function InterServerCard({ value, index, basePath, tone, onChange, onRemove }) {
 
 /* ── 벡터 저장소 ─────────────────────────────────────────── */
 function VectorStoreCard({ value, basePath, onChange }) {
-    const store = findVectorStore(value.type);
     const at = (key) => [...basePath, "vectorsource", key];
-    const has = (field) => store.fields.includes(field);
 
     return (
         <Card>
-            <CardHead
-                icon={<IconVector size={13} />}
-                title="Vector Store"
-                hint="Vectorsource"
-            />
+            <CardHead icon={<IconVector size={13} />} title="Vector Store" hint="vectorsource" />
             <CardBody>
-                <Field label="Store" hint="괄호 안은 권장 데이터 규모입니다.">
+                <Field label="Store" hint="괄호 안은 권장 데이터 규모입니다. 인덱스·거리 계산은 각 저장소 기본값을 그대로 씁니다.">
                     <div className="chipset">
-                        {VECTOR_STORES.map((s) => (
-                            <label key={s.id} className={`chip ${value.type === s.id ? "on" : ""}`} title={`${s.label} · ${s.scale}`}>
+                        {VECTOR_STORES.map((store) => (
+                            <label
+                                key={store.id}
+                                className={`chip ${value.type === store.id ? "on" : ""}`}
+                                title={`${store.label} · ${store.scale}`}
+                            >
                                 <input
                                     type="radio"
                                     name={`${basePath.join(".")}-vstore`}
-                                    checked={value.type === s.id}
-                                    onChange={() => onChange(at("type"), s.id)}
+                                    checked={value.type === store.id}
+                                    onChange={() => onChange(at("type"), store.id)}
                                 />
                                 <span className="chip-dot" />
-                                {s.label}
-                                <span className="chip-sub">{s.scale}</span>
+                                {store.label}
+                                <span className="chip-sub">{store.scale}</span>
                             </label>
                         ))}
                     </div>
                 </Field>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[10px]">
-                    {has("addressAndPort") && (
-                        <TextField label="Address : Port" value={value.addressAndPort} onChange={(v) => onChange(at("addressAndPort"), v)} />
-                    )}
-                    {has("databaseName") && (
-                        <TextField label="Database" value={value.databaseName} onChange={(v) => onChange(at("databaseName"), v)} />
-                    )}
-                    {has("collectionName") && (
-                        <TextField label="Collection" value={value.collectionName} onChange={(v) => onChange(at("collectionName"), v)} />
-                    )}
+                    <TextField label="Host" value={value.host} onChange={(v) => onChange(at("host"), v)} />
+                    <NumberField label="Port" value={value.port} onChange={(v) => onChange(at("port"), v)} />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[10px]">
-                    {has("username") && (
-                        <TextField label="Username" value={value.username} onChange={(v) => onChange(at("username"), v)} />
-                    )}
-                    {has("password") && (
-                        <SecretField label="Password" value={value.password} onChange={(v) => onChange(at("password"), v)} />
-                    )}
-                    {has("apiKey") && (
-                        <SecretField label="API Key" value={value.apiKey} onChange={(v) => onChange(at("apiKey"), v)} />
-                    )}
+                    <SecretField label="API Key" value={value.apiKey} onChange={(v) => onChange(at("apiKey"), v)} />
+                    <Field label="TLS">
+                        <Toggle
+                            name="Use TLS"
+                            desc="https / 보안 연결"
+                            checked={value.useTls}
+                            onChange={(v) => onChange(at("useTls"), v)}
+                        />
+                    </Field>
                 </div>
 
                 <div className="card-divider" />
 
-                <Field label="검색 설정" hint="생성기 고정값입니다. 바꿀 일이 생기면 알려주세요.">
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <span className="locked-chip" title="근사 최근접 탐색 인덱스. HNSW 는 색인·질의 모두 무난한 기본값입니다.">
-                            <IconLock size={12} />index <b>{VECTOR_INDEX_TYPE}</b>
-                        </span>
-                        <span className="locked-chip" title="두 벡터가 얼마나 비슷한지 재는 척도. 코사인은 길이를 무시하고 방향만 비교해 정규화된 임베딩의 표준입니다.">
-                            <IconLock size={12} />distance <b>{VECTOR_DISTANCE_TYPE}</b>
-                        </span>
-                    </div>
-                </Field>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-[10px]">
+                    <TextField
+                        label="Doc Name"
+                        value={value.docName}
+                        onChange={(v) => onChange(at("docName"), v)}
+                        hint="컬렉션(인덱스) 이름"
+                    />
+                    <TextField
+                        label="Field Name"
+                        value={value.fieldName}
+                        onChange={(v) => onChange(at("fieldName"), v)}
+                        hint="본문이 들어갈 필드"
+                    />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-[10px]">
+                    <TextField label="Database" value={value.databaseName} onChange={(v) => onChange(at("databaseName"), v)} />
+                    <TextField label="Username" value={value.username} onChange={(v) => onChange(at("username"), v)} />
+                </div>
+
+                <SecretField label="Password" value={value.password} onChange={(v) => onChange(at("password"), v)} />
 
                 <div className="card-divider" />
 
-                <Field label="Initialize Schema">
+                <Field label="Initialize Schema" hint="없으면 기동할 때 컬렉션을 만듭니다. 이미 있으면 그대로 씁니다.">
                     <Toggle
-                        name="스키마 자동 생성"
-                        desc="기동 시 벡터 테이블·인덱스를 만듭니다"
+                        name="Initialize Schema"
+                        desc="기동 시 컬렉션 자동 생성"
                         checked={value.initializeSchema}
                         onChange={(v) => onChange(at("initializeSchema"), v)}
                     />
                 </Field>
-
-                {value.initializeSchema && (
-                    <Note warn icon={<IconWarn size={15} />}>
-                        <b>초기화를 마친 뒤에는 반드시</b>{" "}
-                        <span className="mono">spring.sql.init.mode</span> 를{" "}
-                        <span className="mono">never</span> 로 바꾸세요. 그대로 두면 재기동할 때마다 초기화
-                        스크립트가 다시 실행되어 적재해 둔 벡터 데이터가 사라질 수 있습니다.
-                    </Note>
-                )}
             </CardBody>
         </Card>
     );
@@ -208,6 +203,7 @@ export default function ServiceCard({
     const rules = ROLE_RULES[role];
     const [open, setOpen] = React.useState(defaultOpen);
     const RoleIcon = ROLE_ICON[role];
+    const confirm = useConfirm();
 
     /* 규칙 위반 값 교정은 ProfileDetail 에서 프로필 단위로 한다.
        (탭을 열지 않아도 Push 가 일관된 결과를 내도록) */
@@ -219,6 +215,45 @@ export default function ServiceCard({
     const vectorOn = service.enabled?.vector === true && !!service.vectorsource;
     const clientOn = service.enabled?.client === true && Array.isArray(service.interServers);
     const interServers = Array.isArray(service.interServers) ? service.interServers : [];
+
+    /* 모듈 토글: 상호 배타(ORM ↔ Embedding)와 필수 동반(Embedding → OpenAPI)을 함께 처리 */
+    const BLOCK_OF = { orm: "orm · datasource", vector: "vectorsource" };
+    const toggleModule = async (key, value) => {
+        const rival = MODULE_EXCLUSIVE[key];
+        if (value && rival && service.enabled?.[rival] === true) {
+            const ok = await confirm({
+                title: `${MODULE_META[key].label} 켜기`,
+                message: (
+                    <>
+                        <b>{MODULE_META[key].label}</b> · <b>{MODULE_META[rival].label}</b> 은(는) 한 서비스에서 함께 쓸 수 없습니다.
+                        켜면 <b>{MODULE_META[rival].label}</b> 이(가) 꺼지고 <span className="mono">{BLOCK_OF[rival]}</span> 설정이 삭제됩니다.
+                    </>
+                ),
+                detail: "두 기능이 모두 필요하면 서비스를 나누고 API 또는 MQ 로 연결하세요.",
+                confirmText: `${MODULE_META[rival].label} 끄고 켜기`,
+                tone: "warn",
+            });
+            if (!ok) return;
+            onChange(at("enabled", rival), false);
+        }
+        onChange(at("enabled", key), value);
+        if (value) {
+            (MODULE_IMPLIES[key] || []).forEach((t) => {
+                if (moduleState(role, t) === "editable") onChange(at("enabled", t), true);
+            });
+        }
+    };
+
+    const removeService = async () => {
+        const ok = await confirm({
+            title: `${rules.label} 삭제`,
+            message: <><b>{service.name || "(이름 없음)"}</b> 을(를) 목록에서 삭제합니다.</>,
+            detail: "Push 전까지는 서버에 반영되지 않습니다.",
+            confirmText: "삭제",
+            tone: "danger",
+        });
+        if (ok) onRemove();
+    };
 
     return (
         <Accordion
@@ -303,9 +338,10 @@ export default function ServiceCard({
                                 name={`${basePath.join(".")}-db`}
                             />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-[10px]">
-                                <TextField label="Address : Port" value={service.datasource.addressAndPort} onChange={(v) => onChange(at("datasource", "addressAndPort"), v)} />
-                                <TextField label="Database" value={service.datasource.databaseName} onChange={(v) => onChange(at("datasource", "databaseName"), v)} />
+                                <TextField label="Host" value={service.datasource.host} onChange={(v) => onChange(at("datasource", "host"), v)} />
+                                <NumberField label="Port" value={service.datasource.port} onChange={(v) => onChange(at("datasource", "port"), v)} />
                             </div>
+                            <TextField label="Database" value={service.datasource.databaseName} onChange={(v) => onChange(at("datasource", "databaseName"), v)} />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-[10px]">
                                 <TextField label="Username" value={service.datasource.username} onChange={(v) => onChange(at("datasource", "username"), v)} />
                                 <SecretField label="Password" value={service.datasource.password} onChange={(v) => onChange(at("datasource", "password"), v)} />
@@ -322,13 +358,13 @@ export default function ServiceCard({
                 </>
             )}
 
-            {/* ── Vector Store (Vector 토글이 지배) ── */}
+            {/* ── Vector Store (Embedding 토글이 지배) ── */}
             {vectorOn && (
                 <>
                     <SubGroup
                         icon={<IconVector size={13} />}
                         count="vectorsource"
-                        note={<><b>Vector</b> 토글로 이 블록을 통째로 켜고 끕니다. 이 접속 정보로 Spring AI VectorStore 와 그 datasource 가 함께 구성되고, 임베딩 모델·차원은 Overview 의 Vector Provider 에서 정합니다.</>}
+                        note={<><b>Embedding</b> 토글로 이 블록을 통째로 켜고 끕니다. 이 접속 정보로 Spring AI VectorStore 와 그 datasource 가 함께 구성되고, 임베딩 모델·차원·유사도 임계값은 Overview 의 Embedder 에서 정합니다.</>}
                     >
                         Vector Store
                     </SubGroup>
@@ -381,7 +417,10 @@ export default function ServiceCard({
                         )}
                         <b>{rules.modules.allowed.map((k) => MODULE_META[k].label).join(" · ")}</b>{" "}
                         {rules.modules.allowed.length}개 선택 가능.{" "}
-                        <b>ORM · Vector · Client</b> 토글은 바로 위의 설정 블록을 통째로 켜고 끕니다.
+                        <b>{rules.modules.allowed.includes("vector") ? "ORM · Embedding · Client" : "ORM · Client"}</b> 토글은 바로 위의 설정 블록을 통째로 켜고 끕니다.
+                        {rules.modules.allowed.includes("vector") && (
+                            <> <b>ORM</b> 과 <b>Embedding</b> 은 함께 켤 수 없고, Embedding 을 켜면 <b>Open API</b> 가 필수로 켜집니다.</>
+                        )}
                     </>
                 }
             >
@@ -391,28 +430,34 @@ export default function ServiceCard({
                 <CardBody>
                     <div className="togglegrid">
                         {MODULE_KEYS.map((key) => {
-                            const state = moduleState(role, key);
+                            const { state, by } = moduleStateFor(role, key, service.enabled);
                             const meta = MODULE_META[key];
                             const locked = state !== "editable";
+                            const rival = MODULE_EXCLUSIVE[key];
+                            const rivalOn = rival && state === "editable" && service.enabled?.[rival] === true;
                             return (
                                 <Toggle
                                     key={key}
                                     name={meta.label}
                                     desc={
                                         state === "forcedOn" ? "항상 켜짐 · 변경 불가"
-                                            : state === "forcedOff" ? `${role === ROLE.BACKEND ? "Gateway / Notification" : "Backend"} 전용`
-                                                : meta.desc
+                                            : state === "implied" ? `${MODULE_META[by].label} 사용 시 필수`
+                                                : state === "forcedOff" ? `${role === ROLE.BACKEND ? "Gateway / Notification" : "Backend"} 전용`
+                                                    : rivalOn && !service.enabled?.[key] ? `켜면 ${MODULE_META[rival].label} 꺼짐`
+                                                        : meta.desc
                                     }
-                                    checked={state === "forcedOn" ? true : state === "forcedOff" ? false : !!service.enabled?.[key]}
+                                    checked={state === "forcedOn" || state === "implied" ? true : state === "forcedOff" ? false : !!service.enabled?.[key]}
                                     locked={locked}
                                     lockTitle={
                                         state === "forcedOn"
                                             ? `${rules.label} 은(는) 항상 ${meta.label} 을(를) 사용합니다 — 변경 불가`
+                                            : state === "implied"
+                                                ? `${MODULE_META[by].label} 이(가) 켜져 있는 동안 ${meta.label} 은(는) 끌 수 없습니다`
                                             : state === "forcedOff"
                                                 ? `${rules.label} 에서는 ${meta.label} 을(를) 사용하지 않습니다`
                                                 : undefined
                                     }
-                                    onChange={(v) => onChange(at("enabled", key), v)}
+                                    onChange={(v) => toggleModule(key, v)}
                                 />
                             );
                         })}
@@ -421,7 +466,7 @@ export default function ServiceCard({
             </Card>
             {onRemove && (
                 <div className="acc-foot">
-                    <button type="button" className="btn btn-sm btn-danger" onClick={onRemove}>
+                    <button type="button" className="btn btn-sm btn-danger" onClick={removeService}>
                         <IconTrash size={13} />{rules.label} {String(index + 1).padStart(2, "0")} 삭제
                     </button>
                 </div>

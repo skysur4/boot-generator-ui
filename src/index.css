@@ -250,6 +250,36 @@ button,input,select,textarea{font:inherit; color:inherit}
 .input::placeholder{color:var(--fg-3);font-family:var(--font-ui)}
 .input:disabled{color:var(--fg-3);background:var(--raised);cursor:not-allowed}
 .input-ui{font-family:var(--font-ui)}
+textarea.textarea{height:auto;min-height:72px;padding:8px 10px;line-height:1.6;resize:vertical}
+
+/* 슬라이더 */
+.range-row{display:flex;align-items:center;gap:10px}
+.range{
+  -webkit-appearance:none;appearance:none;flex:1;height:20px;background:transparent;cursor:pointer;margin:0;
+}
+.range:focus-visible{outline:none}
+.range::-webkit-slider-runnable-track{height:5px;border-radius:99px;background:var(--raised-2);border:1px solid var(--line)}
+.range::-moz-range-track{height:5px;border-radius:99px;background:var(--raised-2);border:1px solid var(--line)}
+.range::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;width:15px;height:15px;border-radius:99px;margin-top:-6px;
+  background:var(--accent);border:2px solid var(--surface);box-shadow:0 1px 3px #0004;transition:transform .12s;
+}
+.range::-moz-range-thumb{
+  width:15px;height:15px;border-radius:99px;border:2px solid var(--surface);
+  background:var(--accent);box-shadow:0 1px 3px #0004;
+}
+.range:hover::-webkit-slider-thumb{transform:scale(1.15)}
+.range:focus-visible::-webkit-slider-thumb{box-shadow:var(--ring)}
+.range-num{width:66px;flex-shrink:0;text-align:center}
+.range-unit{font-size:12px;color:var(--fg-3);flex-shrink:0}
+.range-marks{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}
+.range-mark{
+  height:22px;padding:0 8px;border-radius:var(--r-sm);cursor:pointer;
+  background:transparent;border:1px solid var(--line);color:var(--fg-3);
+  font-family:var(--font-mono);font-size:10.5px;transition:all .13s;
+}
+.range-mark:hover{color:var(--fg-2);border-color:var(--fg-3)}
+.range-mark.on{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-text)}
 
 .secret{position:relative}
 .secret > .input{padding-right:36px;letter-spacing:.04em}
@@ -442,6 +472,39 @@ button,input,select,textarea{font:inherit; color:inherit}
 .toast.on{transform:translate(-50%,0);opacity:1}
 .toast-ico{width:18px;height:18px;border-radius:99px;display:grid;place-items:center;flex-shrink:0;background:var(--accent);color:#0b1508}
 .toast-ico.err{background:var(--danger);color:#fff}
+
+/* ============================================================
+   MODAL (window.confirm / alert 대체)
+   ============================================================ */
+.modal-scrim{
+  position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:16px;
+  background:#0009;backdrop-filter:blur(2px);animation:modal-fade .16s ease-out;
+}
+.modal{
+  width:min(440px,100%);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:0 24px 60px -18px #000c;animation:modal-pop .18s cubic-bezier(.2,.9,.3,1.2);overflow:hidden;
+}
+.modal-head{display:flex;align-items:center;gap:10px;padding:16px 18px 6px}
+.modal-ico{
+  width:28px;height:28px;border-radius:99px;display:grid;place-items:center;flex-shrink:0;
+  background:var(--raised-2);color:var(--fg-2);
+}
+.modal-warn .modal-ico{background:#e0a33a22;color:var(--warn)}
+.modal-danger .modal-ico{background:#e5574f1f;color:var(--danger)}
+.modal-info .modal-ico{background:var(--info-soft);color:var(--info-text)}
+.modal-title{margin:0;font-size:14px;font-weight:650;color:var(--fg)}
+.modal-body{padding:4px 18px 16px 56px;font-size:12.8px;line-height:1.6;color:var(--fg-2);word-break:keep-all}
+.modal-body b{color:var(--fg);font-weight:600}
+.modal-detail{
+  margin-top:10px;padding:8px 10px;border-radius:var(--r-sm);background:var(--raised);border:1px solid var(--line);
+  font-size:11.8px;color:var(--fg-2);
+}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--line);background:var(--raised)}
+.btn-danger-solid{background:var(--danger);border-color:transparent;color:#fff;font-weight:650}
+.btn-danger-solid:hover{background:#d4463e;border-color:transparent;color:#fff}
+@keyframes modal-fade{from{opacity:0}to{opacity:1}}
+@keyframes modal-pop{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.modal-scrim,.modal{animation:none}}
 
 @media (max-width:900px){
   .rail{width:210px}

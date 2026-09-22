@@ -5,6 +5,7 @@ import ProfileList from "./components/ProfileList";
 import ProfileDetail from "./components/ProfileDetail";
 import JsonPreviewPopup from "./components/JsonPreviewPopup";
 import ToastAlert from "./components/ToastAlert";
+import { ConfirmProvider, useConfirm } from "./components/ConfirmDialog";
 import { useSystemTheme } from "./hooks/useSystemTheme";
 import { fetchProfiles, saveProfile, deleteProfile, generateProfile } from "./api";
 import { orderProfileKeys } from "./config/rules";
@@ -16,7 +17,16 @@ import {
 const DEFAULT_PROFILE_NAME = "template";
 
 export default function App() {
+    return (
+        <ConfirmProvider>
+            <AppShell />
+        </ConfirmProvider>
+    );
+}
+
+function AppShell() {
     const { isDark, toggleTheme } = useSystemTheme();
+    const confirm = useConfirm();
 
     const [profiles, setProfiles] = useState({});
     const [selected, setSelected] = useState("");
@@ -56,9 +66,17 @@ export default function App() {
         JSON.stringify(profiles[selected]) !== JSON.stringify(editingProfile);
 
     /* ── 선택 ──────────────────────────────────────────── */
-    const handleSelect = (title) => {
+    const handleSelect = async (title) => {
         if (title === selected) return;
-        if (isDirty && !window.confirm("커밋되지 않은 변경 내용이 있습니다. 이동하면 사라집니다. 계속할까요?")) return;
+        if (isDirty) {
+            const ok = await confirm({
+                title: "변경 내용 버리기",
+                message: <>커밋되지 않은 변경 내용이 있습니다. <b>{title}</b> 로 이동하면 사라집니다.</>,
+                confirmText: "버리고 이동",
+                tone: "warn",
+            });
+            if (!ok) return;
+        }
 
         setSelected(title);
         const target = profiles[title];
@@ -100,9 +118,13 @@ export default function App() {
         if (profileName === DEFAULT_PROFILE_NAME) return showToast("template 은 Push 할 수 없습니다", "error");
         try {
             if (isDirty) {
-                if (!window.confirm("커밋되지 않은 변경 내용이 있습니다. 바로 저장하시겠습니까?")) {
-                    return showToast("Push cancelled");
-                }
+                const ok = await confirm({
+                    title: "바로 Push",
+                    message: <>커밋되지 않은 변경 내용이 있습니다. 커밋 없이 <b>{profileName}</b> 을(를) 바로 저장할까요?</>,
+                    confirmText: "Push",
+                    tone: "info",
+                });
+                if (!ok) return showToast("Push cancelled");
                 setProfiles((prev) => ({ ...prev, [profileName]: editingProfile }));
             }
             await saveProfile(profileName, orderProfileKeys(editingProfile));
@@ -115,7 +137,14 @@ export default function App() {
 
     const handleRemove = async (profileName) => {
         if (profileName === DEFAULT_PROFILE_NAME) return showToast("template 은 삭제할 수 없습니다", "error");
-        if (!window.confirm(`${profileName} 프로필을 삭제하시겠습니까?`)) return showToast("Delete cancelled");
+        const ok = await confirm({
+            title: "프로필 삭제",
+            message: <><b>{profileName}</b> 프로필을 서버에서 삭제합니다.</>,
+            detail: "삭제 후에는 되돌릴 수 없습니다.",
+            confirmText: "삭제",
+            tone: "danger",
+        });
+        if (!ok) return showToast("Delete cancelled");
 
         try {
             await deleteProfile(profileName);
