@@ -31,7 +31,7 @@ export default function ProfileDetail({
         if (typeof handleChange === "function") handleChange(path, value);
     }, [handleChange]);
 
-    /* 서비스에서 Vector 를 켜면 루트 vector 블록을 만들어 둔다 */
+    /* 규칙 교정 + 서비스에서 Embedding 을 켜면 루트 embedder 블록을 만들어 둔다 */
     React.useEffect(() => {
         const fixed = normalizeProfile(profile);
         if (fixed) updateValue([], fixed);

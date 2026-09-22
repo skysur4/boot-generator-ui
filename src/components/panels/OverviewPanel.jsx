@@ -1,15 +1,15 @@
 import React from "react";
 import {
-    AUTHENTICATOR_TYPES, AI_TYPES, MESSAGE_BROKERS,
-    EMBEDDER_TYPES, EMBEDDER_META, EMBEDDING_MODELS, findEmbeddingModel,
+    AUTHENTICATOR_TYPES, AI_TYPES, AI_DEFAULT_MODELS, MESSAGE_BROKERS,
+    EMBEDDER_TYPES, EMBEDDER_META, EMBEDDING_MODELS, findEmbeddingModel, defaultEmbeddingModel,
     SIMILARITY_MIN, SIMILARITY_MAX,
 } from "../../config/rules";
-import { Card, CardHead, CardBody, Note } from "../ui/primitives";
+import { Card, CardHead, CardBody } from "../ui/primitives";
 import {
-    Field, TextField, NumberField, SecretField, SegmentedField, Toggle,
+    Field, TextField, SecretField, SegmentedField, Toggle,
     TextAreaField, RangeField,
 } from "../ui/fields";
-import { IconFile, IconLock, IconSparkles, IconPulse, IconInfo, IconVector, IconWarn } from "../ui/icons";
+import { IconFile, IconLock, IconSparkles, IconPulse, IconVector } from "../ui/icons";
 
 export default function OverviewPanel({ profile, onChange }) {
     const version = profile.version || {};
@@ -17,13 +17,12 @@ export default function OverviewPanel({ profile, onChange }) {
     const ai = profile.ai || {};
 
     const embedder = profile.embedder || {};
-    const embedderMeta = EMBEDDER_META[embedder.type] || EMBEDDER_META.LOCAL;
-    const presets = EMBEDDING_MODELS[embedder.type] || EMBEDDING_MODELS.LOCAL;
+    const embedderMeta = EMBEDDER_META[embedder.type] || EMBEDDER_META.OPENAI;
+    const models = EMBEDDING_MODELS[embedder.type] || EMBEDDING_MODELS.OPENAI;
     const modelMeta = findEmbeddingModel(embedder.type, embedder.model);
-    const dimMismatch = !!modelMeta && !modelMeta.dims.includes(Number(embedder.dimensions));
 
     const isKeycloak = authenticator.type === "KEYCLOAK";
-    const isLocalAi = ai.type === "LOCAL";
+    const isOllamaAi = ai.type === "OLLAMA";
     const versionText = [version.major, version.minor, version.patch]
         .map((n) => (n ?? 0)).join(".");
 
@@ -114,25 +113,28 @@ export default function OverviewPanel({ profile, onChange }) {
                             name="ai-type"
                             value={ai.type}
                             options={AI_TYPES}
-                            onChange={(v) => onChange(["ai", "type"], v)}
+                            onChange={(v) => {
+                                onChange(["ai", "type"], v);
+                                if (AI_DEFAULT_MODELS[v]) onChange(["ai", "model"], AI_DEFAULT_MODELS[v]);
+                            }}
+                            hint={AI_DEFAULT_MODELS[ai.type] ? `기본 모델: ${AI_DEFAULT_MODELS[ai.type]}` : undefined}
                         />
-                        <TextField label="Model" value={ai.model} onChange={(v) => onChange(["ai", "model"], v)} />
-                        <div style={{ opacity: isLocalAi ? 1 : .45 }}>
-                            <TextField
-                                label="URL"
-                                tag="LOCAL"
-                                tagTone="b"
-                                placeholder={isLocalAi ? "http://localhost:11434" : "LOCAL 일 때만 사용"}
-                                value={ai.url}
-                                onChange={(v) => onChange(["ai", "url"], v)}
-                            />
-                        </div>
+                        <TextField
+                            label="URL"
+                            tag="OLLAMA"
+                            tagTone="b"
+                            disabled={!isOllamaAi}
+                            placeholder={isOllamaAi ? "http://localhost:11434" : "OLLAMA 일 때만 사용"}
+                            value={ai.url}
+                            onChange={(v) => onChange(["ai", "url"], v)}
+                        />
                         <SecretField
                             label="API Key"
                             value={ai.apiKey}
                             onChange={(v) => onChange(["ai", "apiKey"], v)}
                             hint="Push 시 서버로 전송됩니다. 화면에서는 기본 마스킹."
                         />
+                        <TextField label="Model" value={ai.model} onChange={(v) => onChange(["ai", "model"], v)} />
                         <TextAreaField
                             label="System Prompt"
                             rows={3}
@@ -146,7 +148,7 @@ export default function OverviewPanel({ profile, onChange }) {
 
                 {/* Embedder */}
                 <Card>
-                    <CardHead icon={<IconVector size={13} />} title="Embedder" hint="embedder" />
+                    <CardHead icon={<IconVector size={13} />} title="Embedding Provider" hint="embedder" />
                     <CardBody>
                         <SegmentedField
                             label="Type"
@@ -154,78 +156,77 @@ export default function OverviewPanel({ profile, onChange }) {
                             value={embedder.type}
                             options={EMBEDDER_TYPES}
                             onChange={(v) => {
-                                const first = EMBEDDING_MODELS[v]?.[0];
+                                const first = defaultEmbeddingModel(v);
                                 onChange(["embedder", "type"], v);
-                                if (first) {
-                                    onChange(["embedder", "model"], first.id);
-                                    onChange(["embedder", "dimensions"], first.dims[0]);
-                                }
+                                onChange(["embedder", "model"], first.id);
+                                onChange(["embedder", "dimensions"], first.def);
                             }}
                             hint={embedderMeta.desc}
                         />
 
                         <TextField
                             label="URL"
+                            tag="OLLAMA"
+                            tagTone="b"
+                            disabled={!embedderMeta.usesUrl}
                             value={embedder.url}
-                            placeholder={embedderMeta.urlHint}
+                            placeholder={embedderMeta.usesUrl ? embedderMeta.urlHint : "OLLAMA 일 때만 사용"}
                             onChange={(v) => onChange(["embedder", "url"], v)}
                         />
 
                         <SecretField
                             label="API Key"
+                            disabled={!embedderMeta.usesApiKey}
                             value={embedder.apiKey}
                             onChange={(v) => onChange(["embedder", "apiKey"], v)}
+                            hint={embedderMeta.usesApiKey ? undefined : `${embedder.type} 는 API Key 를 쓰지 않습니다.`}
                         />
 
-                        <Field
-                            label="Model"
-                            hint="서버에 올린 모델 이름을 그대로 적습니다. 아래 칩을 누르면 모델과 차원이 함께 채워집니다."
-                        >
-                            <input
-                                className="input"
-                                value={embedder.model ?? ""}
-                                placeholder="text-embedding-bge-m3"
-                                onChange={(e) => onChange(["embedder", "model"], e.target.value)}
-                            />
-                            <div className="chipset" style={{ marginTop: 7 }}>
-                                {presets.map((m) => (
+                        <Field label="Model" hint="모델을 고르면 그 모델의 기본 차원이 함께 채워집니다.">
+                            <div className="chipset">
+                                {models.map((m) => (
                                     <button
                                         key={m.id}
                                         type="button"
                                         className={`chip ${embedder.model === m.id ? "on" : ""}`}
-                                        title={m.desc}
                                         onClick={() => {
                                             onChange(["embedder", "model"], m.id);
-                                            onChange(["embedder", "dimensions"], m.dims[0]);
+                                            onChange(["embedder", "dimensions"], m.def);
                                         }}
                                     >
                                         <span className="chip-dot" />
                                         {m.id}
-                                        <span className="chip-sub">{m.dims[0]}</span>
+                                        <span className="chip-sub">{m.dims.length > 1 ? `${m.dims.length}종` : m.def}</span>
                                     </button>
                                 ))}
                             </div>
                         </Field>
 
-                        <NumberField
+                        <Field
                             label="Dimensions"
-                            width={150}
-                            value={embedder.dimensions}
-                            onChange={(v) => onChange(["embedder", "dimensions"], v)}
                             hint={
-                                modelMeta
-                                    ? `${modelMeta.id} 는 ${modelMeta.dims.join(" · ")} 차원을 지원합니다.`
-                                    : "모델이 내놓는 차원과 반드시 같아야 합니다."
+                                !modelMeta ? "모델을 먼저 선택하세요."
+                                    : modelMeta.dims.length > 1
+                                        ? `${modelMeta.id} 가 지원하는 차원입니다. 이미 적재한 벡터와 차원이 다르면 저장소를 다시 만들어야 합니다.`
+                                        : `${modelMeta.id} 는 ${modelMeta.def} 차원 고정입니다.`
                             }
-                        />
-
-                        {dimMismatch && (
-                            <Note warn icon={<IconWarn size={15} />}>
-                                <b>{modelMeta.id}</b> 이(가) 지원하지 않는 차원입니다
-                                (지원: {modelMeta.dims.join(" · ")}). 이미 적재한 벡터와 어긋나면 검색이
-                                실패하거나 저장소를 다시 만들어야 합니다.
-                            </Note>
-                        )}
+                        >
+                            <div className="chipset">
+                                {(modelMeta ? modelMeta.dims : []).map((d) => (
+                                    <label key={d} className={`chip ${Number(embedder.dimensions) === d ? "on" : ""}`}>
+                                        <input
+                                            type="radio"
+                                            name="embedder-dimensions"
+                                            checked={Number(embedder.dimensions) === d}
+                                            onChange={() => onChange(["embedder", "dimensions"], d)}
+                                        />
+                                        <span className="chip-dot" />
+                                        {d}
+                                        {d === modelMeta.def && <span className="chip-sub">기본</span>}
+                                    </label>
+                                ))}
+                            </div>
+                        </Field>
 
                         <RangeField
                             label="Similarity Threshold"
@@ -243,8 +244,8 @@ export default function OverviewPanel({ profile, onChange }) {
                         />
 
                         <div className="f-hint">
-                            채팅 모델(AI Provider)과 임베딩 공급자는 서로 묶이지 않습니다. OpenAI 외 공급자(Voyage 등)는{" "}
-                            <b>LOCAL</b> 로 두고 URL · API Key 를 채웁니다. 서비스의 <b>Embedding</b> 토글이 하나라도 켜져 있을 때 사용됩니다.
+                            채팅 모델(AI Provider)과 임베딩 공급자는 서로 묶이지 않습니다.
+                            서비스의 <b>Embedding</b> 토글이 하나라도 켜져 있을 때 사용됩니다.
                         </div>
                     </CardBody>
                 </Card>

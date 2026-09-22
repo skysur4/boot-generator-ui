@@ -212,12 +212,12 @@ export default function ServiceCard({
 
     const at = (...keys) => [...basePath, ...keys];
     const ormOn = service.enabled?.orm === true && !!service.orm && !!service.datasource;
-    const vectorOn = service.enabled?.vector === true && !!service.vectorsource;
+    const vectorOn = service.enabled?.embedding === true && !!service.vectorsource;
     const clientOn = service.enabled?.client === true && Array.isArray(service.interServers);
     const interServers = Array.isArray(service.interServers) ? service.interServers : [];
 
     /* 모듈 토글: 상호 배타(ORM ↔ Embedding)와 필수 동반(Embedding → OpenAPI)을 함께 처리 */
-    const BLOCK_OF = { orm: "orm · datasource", vector: "vectorsource" };
+    const BLOCK_OF = { orm: "orm · datasource", embedding: "vectorsource" };
     const toggleModule = async (key, value) => {
         const rival = MODULE_EXCLUSIVE[key];
         if (value && rival && service.enabled?.[rival] === true) {
@@ -417,8 +417,8 @@ export default function ServiceCard({
                         )}
                         <b>{rules.modules.allowed.map((k) => MODULE_META[k].label).join(" · ")}</b>{" "}
                         {rules.modules.allowed.length}개 선택 가능.{" "}
-                        <b>{rules.modules.allowed.includes("vector") ? "ORM · Embedding · Client" : "ORM · Client"}</b> 토글은 바로 위의 설정 블록을 통째로 켜고 끕니다.
-                        {rules.modules.allowed.includes("vector") && (
+                        <b>{rules.modules.allowed.includes("embedding") ? "ORM · Embedding · Client" : "ORM · Client"}</b> 토글은 바로 위의 설정 블록을 통째로 켜고 끕니다.
+                        {rules.modules.allowed.includes("embedding") && (
                             <> <b>ORM</b> 과 <b>Embedding</b> 은 함께 켤 수 없고, Embedding 을 켜면 <b>Open API</b> 가 필수로 켜집니다.</>
                         )}
                     </>

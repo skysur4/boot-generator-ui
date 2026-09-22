@@ -13,7 +13,7 @@ export const ROLE = {
 
 /* ── 모듈(enabled) 메타 ──────────────────────────────────── */
 export const MODULE_KEYS = [
-    "authentication", "session", "roles", "orm", "ai", "vector",
+    "authentication", "session", "roles", "orm", "ai", "embedding",
     "event", "notice", "client", "openapi", "monitoring", "hexagonal",
 ];
 
@@ -23,7 +23,7 @@ export const MODULE_KEYS = [
  * 이 배열은 생성기가 내려주는 실제 프로필의 키 순서와 같게 맞춰 둔다.
  */
 export const ENABLED_KEY_ORDER = [
-    "hexagonal",  "roles", "orm", "ai", "vector", "event", "notice",
+    "hexagonal",  "roles", "orm", "ai", "embedding", "event", "notice",
     "client", "openapi", "monitoring", "authentication", "session",
 ];
 
@@ -31,13 +31,13 @@ export const MODULE_META = {
     authentication: { label: "Authentication", desc: "인증 연동" },
     session:        { label: "Session",        desc: "세션 사용" },
     roles:          { label: "Roles",          desc: "롤 적용" },
-    orm:            { label: "ORM",            desc: "DB 사용" },
+    orm:            { label: "ORM",            desc: "일반 DB 사용" },
     ai:             { label: "AI",             desc: "AI 연동" },
     event:          { label: "Event",          desc: "이벤트 발송" },
     notice:         { label: "Notice",         desc: "알림 발송" },
     client:         { label: "Client",         desc: "외부 API 호출" },
     openapi:        { label: "Open API",       desc: "API 외부 공유" },
-    vector:         { label: "Embedding",      desc: "벡터 검색" },
+    embedding:      { label: "Embedding",      desc: "벡터 DB 사용" },
     monitoring:     { label: "Monitoring",     desc: "Otel 연동" },
     hexagonal:      { label: "Hexagonal",      desc: "헥사고널 패턴 사용" },
 };
@@ -49,7 +49,18 @@ export const DATABASES = ["postgresql", "mysql", "mariadb", "oracle", "sqlserver
 
 /* ── 루트 레벨 선택지 ────────────────────────────────────── */
 export const AUTHENTICATOR_TYPES = ["KEYCLOAK", "GOOGLE", "NAVER", "KAKAO"];
-export const AI_TYPES = ["LOCAL", "OPENAI", "ANTHROPIC"];
+export const AI_TYPES = ["OLLAMA", "OPENAI", "ANTHROPIC", "GOOGLE"];
+
+/** 타입을 바꿀 때 채워 넣는 기본 모델 */
+export const AI_DEFAULT_MODELS = {
+    OLLAMA:    "meta-llama/Llama-3.2-1B",
+    OPENAI:    "gpt-4o-mini",
+    ANTHROPIC: "claude-3-5-sonnet",
+    GOOGLE:    "gemini-2.5-flash",
+};
+
+/** 이전 스펙의 타입 이름 → 현재 이름 */
+export const AI_TYPE_ALIASES = { LOCAL: "OLLAMA" };
 export const MESSAGE_BROKERS = ["APP", "KAFKA", "REDIS", "NATS"];
 export const RESPONSIBILITY_SEGREGATION = ["BOTH", "COMMAND", "QUERY"];
 
@@ -57,43 +68,55 @@ export const RESPONSIBILITY_SEGREGATION = ["BOTH", "COMMAND", "QUERY"];
 export const BROKERS_NEEDING_CONNECTOR = ["KAFKA", "REDIS", "NATS"];
 
 /* ── Embedder : 임베딩 공급자 (루트, ai 와 같은 층) ──────── */
-/** VOYAGE 등 OpenAI 외 공급자는 생성기에서 LOCAL 로 취급한다 (URL + API Key 로 접속) */
-export const EMBEDDER_TYPES = ["LOCAL", "OPENAI"];
+export const EMBEDDER_TYPES = ["INTERNAL", "OLLAMA", "OPENAI", "GOOGLE"];
 
+/** 이전 스펙의 타입 이름 → 현재 이름 (VOYAGE 는 과거 LOCAL 취급 → OLLAMA) */
+export const EMBEDDER_TYPE_ALIASES = { LOCAL: "OLLAMA", VOYAGE: "OLLAMA" };
+
+/**
+ * usesUrl    : URL 입력 사용 여부 (OLLAMA 만)
+ * usesApiKey : API Key 입력 사용 여부
+ */
 export const EMBEDDER_META = {
-    LOCAL:  { desc: "자체 추론 서버 또는 OpenAI 외 공급자 (Ollama · LM Studio · TEI · Voyage 등)", urlHint: "예: http://192.168.50.200:11434" },
-    OPENAI: { desc: "OpenAI Embeddings API", urlHint: "프록시/게이트웨이를 거칠 때만 입력" },
+    INTERNAL: { desc: "애플리케이션 내장 모델 (ONNX) · 외부 서버 불필요", usesUrl: false, usesApiKey: false },
+    OLLAMA:   { desc: "Ollama 서버",                                    usesUrl: true,  usesApiKey: false, urlHint: "예: http://192.168.50.200:11434" },
+    OPENAI:   { desc: "OpenAI Embeddings API",                          usesUrl: false, usesApiKey: true },
+    GOOGLE:   { desc: "Google Gemini Embeddings API",                   usesUrl: false, usesApiKey: true },
 };
 
 /**
- * 모델 프리셋. 칩을 누르면 model 과 dimensions 를 함께 채운다.
- * LOCAL 은 서버에 올린 모델이 무엇이든 될 수 있으므로 model 은 자유 입력이고
- * 이 목록은 자주 쓰는 값의 바로가기일 뿐이다.
- *
- * 차원 출처
- *  - all-MiniLM-L6-v2 384   : Spring AI Transformers(ONNX) 기본 모델
- *  - bge-m3 / KURE-v1 1024  : BAAI/bge-m3 및 그 한국어 파인튜닝
- *  - multilingual-e5-large  : 1024
- *  - text-embedding-3-*     : 기본 1536 / 3072, dimensions 파라미터로 축소 가능
- *  - voyage-*               : 기본 1024, 256·512·1024·2048 지원 (LOCAL 로 취급)
+ * 선택 가능한 모델과 차원 (스펙 고정 · 수동 입력 없음).
+ * dims 의 첫 값이 아니라 def 가 기본 차원이다. 목록의 첫 모델이 타입의 기본 모델.
  */
 export const EMBEDDING_MODELS = {
-    LOCAL: [
-        { id: "text-embedding-bge-m3",  dims: [1024], desc: "다국어 · 한국어 양호" },
-        { id: "KURE-v1",                dims: [1024], desc: "한국어 검색 특화 · bge-m3 기반" },
-        { id: "multilingual-e5-large",  dims: [1024], desc: "다국어 · 로컬에서 안정적" },
-        { id: "all-MiniLM-L6-v2",       dims: [384],  desc: "가장 가벼움" },
-        { id: "voyage-3.5",             dims: [1024, 2048, 512, 256], desc: "Voyage · URL / API Key 필요" },
-        { id: "voyage-3-large",         dims: [1024, 2048, 512, 256], desc: "Voyage · URL / API Key 필요" },
+    INTERNAL: [
+        { id: "all-MiniLM-L6-v2",      dims: [384],  def: 384 },
+        { id: "multilingual-e5-base",  dims: [768],  def: 768 },
+        { id: "KURE-v1",               dims: [1024], def: 1024 },
+    ],
+    OLLAMA: [
+        { id: "all-MiniLM-L6-v2",      dims: [384],  def: 384 },
+        { id: "multilingual-e5-base",  dims: [768],  def: 768 },
+        { id: "KURE-v1",               dims: [1024], def: 1024 },
+        { id: "voyage-4-nano",         dims: [512],  def: 512 },
     ],
     OPENAI: [
-        { id: "text-embedding-3-small", dims: [1536, 1024, 512, 256],       desc: "기본 1536 · 축소 가능" },
-        { id: "text-embedding-3-large", dims: [3072, 2048, 1024, 512, 256], desc: "기본 3072 · 축소 가능" },
+        { id: "text-embedding-3-small", dims: [1536, 1024, 768, 512, 384],       def: 1024 },
+        { id: "text-embedding-3-large", dims: [3072, 2048, 1536, 1024, 768, 512, 384], def: 1024 },
+    ],
+    GOOGLE: [
+        { id: "text-embedding-004",     dims: [768],                                   def: 768 },
+        { id: "gemini-embedding-001",   dims: [3072, 2048, 1536, 1024, 768, 512, 384], def: 1024 },
     ],
 };
 
 export function findEmbeddingModel(type, modelId) {
     return (EMBEDDING_MODELS[type] || []).find((m) => m.id === modelId) || null;
+}
+
+/** 타입의 기본 모델 */
+export function defaultEmbeddingModel(type) {
+    return (EMBEDDING_MODELS[type] || EMBEDDING_MODELS.OPENAI)[0];
 }
 
 /** 유사도 임계값 (%) */
@@ -133,7 +156,7 @@ export const ROLE_RULES = {
         sectionDesc: "배열 · 여러 개 추가 가능",
         isArray: true,
         modules: {
-            allowed: ["hexagonal", "orm", "ai", "event", "notice", "openapi", "client", "vector", "monitoring", "roles"],
+            allowed: ["hexagonal", "orm", "ai", "event", "notice", "openapi", "client", "embedding", "monitoring", "roles"],
             forcedOn: [],
         },
         orm: {
@@ -205,8 +228,8 @@ export function moduleState(role, key) {
  *  - MODULE_IMPLIES   : 켜면 함께 켜지고, 켜져 있는 동안 잠기는 모듈.
  *      Embedding 서비스는 API 로 노출되므로 OpenAPI 필수.
  */
-export const MODULE_EXCLUSIVE = { orm: "vector", vector: "orm" };
-export const MODULE_IMPLIES = { vector: ["openapi"] };
+export const MODULE_EXCLUSIVE = { orm: "embedding", embedding: "orm" };
+export const MODULE_IMPLIES = { embedding: ["openapi"] };
 
 /** 이 키를 필수로 만드는 켜진 모듈 (없으면 null) */
 export function impliedBy(key, enabled) {
@@ -259,13 +282,13 @@ export function createExternalConnector() {
  * 키 순서는 template.json 의 embedder 와 같게 맞춘다.
  */
 export function createEmbedder() {
-    const model = EMBEDDING_MODELS.OPENAI[0];          // text-embedding-3-small
+    const model = defaultEmbeddingModel("OPENAI");     // text-embedding-3-small · 1024
     return {
         type: "OPENAI",
         url: null,
         apiKey: null,
         model: model.id,
-        dimensions: model.dims[0],
+        dimensions: model.def,
         similarity: SIMILARITY_DEFAULT,
     };
 }
@@ -320,8 +343,19 @@ export function normalizeService(service, role) {
     let changed = false;
     const next = { ...service };
 
+    // 0) 이전 스펙의 enabled.vector → enabled.embedding (같은 자리에서 이름만 바꾼다)
+    let enabled = { ...(service.enabled || {}) };
+    if ("vector" in enabled) {
+        const renamed = {};
+        Object.keys(enabled).forEach((k) => {
+            if (k === "vector") { if (!("embedding" in enabled)) renamed.embedding = enabled.vector; }
+            else renamed[k] = enabled[k];
+        });
+        enabled = renamed;
+        changed = true;
+    }
+
     // 1) enabled 플래그를 규칙에 맞춘다
-    const enabled = { ...(service.enabled || {}) };
     MODULE_KEYS.forEach((key) => {
         const state = moduleState(role, key);
         if (state === "forcedOn" && enabled[key] !== true) { enabled[key] = true; changed = true; }
@@ -330,7 +364,7 @@ export function normalizeService(service, role) {
 
     // 1-b) 상호 배타: ORM 과 Embedding 이 둘 다 켜져 있으면 ORM 을 남긴다.
     //      (UI 토글은 확인 팝업을 거쳐 한쪽을 끄므로 이 경로는 기존 데이터 교정용)
-    if (enabled.orm === true && enabled.vector === true) { enabled.vector = false; changed = true; }
+    if (enabled.orm === true && enabled.embedding === true) { enabled.embedding = false; changed = true; }
 
     // 1-c) 필수 동반: Embedding 이 켜져 있으면 OpenAPI 도 켠다
     Object.entries(MODULE_IMPLIES).forEach(([src, targets]) => {
@@ -359,9 +393,9 @@ export function normalizeService(service, role) {
         delete next.interServers; changed = true;
     }
 
-    // 4) Embedding(vector) 토글이 vectorsource 의 존재를 지배한다
-    const vectorOn = enabled.vector === true;
-    if (vectorOn) {
+    // 4) Embedding 토글이 vectorsource 의 존재를 지배한다
+    const embeddingOn = enabled.embedding === true;
+    if (embeddingOn) {
         if (!isObject(next.vectorsource)) { next.vectorsource = createVectorSource(); changed = true; }
     } else if ("vectorsource" in next) {
         delete next.vectorsource; changed = true;
@@ -436,7 +470,7 @@ export function orderServiceKeys(service) {
 
 /**
  * 프로필 레벨 정규화.
- * 서비스 중 하나라도 vector 를 켰는데 루트 `embedder` 블록이 없으면 만들어 준다.
+ * 서비스 중 하나라도 embedding 을 켰는데 루트 `embedder` 블록이 없으면 만들어 준다.
  * 바꿀 게 없으면 null.
  */
 export function normalizeProfile(profile) {
@@ -458,22 +492,40 @@ export function normalizeProfile(profile) {
         if (fixed) { next[key] = fixed; changed = true; }
     });
 
-    /* 2) 서비스 중 하나라도 Embedding(vector) 을 켰으면 루트 embedder 블록을 만든다 */
+    /* 2) 서비스 중 하나라도 Embedding 을 켰으면 루트 embedder 블록을 만든다 */
     const services = [
         ...(Array.isArray(next.projects) ? next.projects : []),
         next.gateway,
         next.notification,
     ].filter(isObject);
 
-    if (services.some((s) => s?.enabled?.vector === true) && !isObject(next.embedder)) {
+    if (services.some((s) => s?.enabled?.embedding === true) && !isObject(next.embedder)) {
         next.embedder = createEmbedder();
         changed = true;
     }
 
-    /* 3) 지원하지 않는 embedder.type (예: VOYAGE) 은 LOCAL 로 — model / url / apiKey 는 그대로 둔다 */
-    if (isObject(next.embedder) && next.embedder.type && !EMBEDDER_TYPES.includes(next.embedder.type)) {
-        next.embedder = { ...next.embedder, type: "LOCAL" };
+    /* 3) ai.type 이전 이름(LOCAL) → OLLAMA */
+    if (isObject(next.ai) && AI_TYPE_ALIASES[next.ai.type]) {
+        next.ai = { ...next.ai, type: AI_TYPE_ALIASES[next.ai.type] };
         changed = true;
+    }
+
+    /* 4) embedder 를 선택 가능한 값으로 맞춘다 (수동 입력이 없으므로 목록 밖 값은 기본값으로)
+          - type  : LOCAL/VOYAGE → OLLAMA, 그 밖의 모르는 값 → OPENAI
+          - model : 해당 type 목록에 없으면 type 의 기본 모델
+          - dims  : 해당 model 이 지원하지 않으면 model 의 기본 차원 */
+    if (isObject(next.embedder)) {
+        const e = { ...next.embedder };
+        let type = EMBEDDER_TYPE_ALIASES[e.type] || e.type;
+        if (!EMBEDDER_TYPES.includes(type)) type = "OPENAI";
+        let model = findEmbeddingModel(type, e.model);
+        if (!model) model = defaultEmbeddingModel(type);
+        const dims = model.dims.includes(Number(e.dimensions)) ? Number(e.dimensions) : model.def;
+        if (e.type !== type || e.model !== model.id || e.dimensions !== dims) {
+            e.type = type; e.model = model.id; e.dimensions = dims;
+            next.embedder = e;
+            changed = true;
+        }
     }
 
     return changed ? next : null;
