@@ -1,7 +1,8 @@
 import React from "react";
 import {
-    AUTHENTICATOR_TYPES, AI_TYPES, AI_DEFAULT_MODELS, MESSAGE_BROKERS,
+    AUTHENTICATOR_TYPES, AI_TYPES, AI_DEFAULT_MODELS, AI_DEFAULT_URLS, MESSAGE_BROKERS,
     EMBEDDER_TYPES, EMBEDDER_META, EMBEDDING_MODELS, findEmbeddingModel, defaultEmbeddingModel,
+    embedderUsesUrl, stripUrlPrefix, withUrlPrefix,
     SIMILARITY_MIN, SIMILARITY_MAX,
 } from "../../config/rules";
 import { Card, CardHead, CardBody } from "../ui/primitives";
@@ -20,6 +21,8 @@ export default function OverviewPanel({ profile, onChange }) {
     const embedderMeta = EMBEDDER_META[embedder.type] || EMBEDDER_META.OPENAI;
     const models = EMBEDDING_MODELS[embedder.type] || EMBEDDING_MODELS.OPENAI;
     const modelMeta = findEmbeddingModel(embedder.type, embedder.model);
+    const usesUrl = embedderUsesUrl(embedder);
+    const urlPrefix = embedderMeta.urlPrefix || "";
 
     const isKeycloak = authenticator.type === "KEYCLOAK";
     const isOllamaAi = ai.type === "OLLAMA";
@@ -116,6 +119,7 @@ export default function OverviewPanel({ profile, onChange }) {
                             onChange={(v) => {
                                 onChange(["ai", "type"], v);
                                 if (AI_DEFAULT_MODELS[v]) onChange(["ai", "model"], AI_DEFAULT_MODELS[v]);
+                                if (AI_DEFAULT_URLS[v]) onChange(["ai", "url"], AI_DEFAULT_URLS[v]);
                             }}
                             hint={AI_DEFAULT_MODELS[ai.type] ? `기본 모델: ${AI_DEFAULT_MODELS[ai.type]}` : undefined}
                         />
@@ -124,7 +128,7 @@ export default function OverviewPanel({ profile, onChange }) {
                             tag="OLLAMA"
                             tagTone="b"
                             disabled={!isOllamaAi}
-                            placeholder={isOllamaAi ? "http://localhost:11434" : "OLLAMA 일 때만 사용"}
+                            placeholder={isOllamaAi ? AI_DEFAULT_URLS.OLLAMA : "OLLAMA 일 때만 사용"}
                             value={ai.url}
                             onChange={(v) => onChange(["ai", "url"], v)}
                         />
@@ -157,22 +161,38 @@ export default function OverviewPanel({ profile, onChange }) {
                             options={EMBEDDER_TYPES}
                             onChange={(v) => {
                                 const first = defaultEmbeddingModel(v);
+                                const meta = EMBEDDER_META[v] || {};
                                 onChange(["embedder", "type"], v);
                                 onChange(["embedder", "model"], first.id);
                                 onChange(["embedder", "dimensions"], first.def);
+                                if (meta.defaultUrl) onChange(["embedder", "url"], meta.defaultUrl);
                             }}
                             hint={embedderMeta.desc}
                         />
 
-                        <TextField
-                            label="URL"
-                            tag="OLLAMA"
+                        <Field
+                            label={embedderMeta.urlLabel || "URL"}
+                            tag={embedderMeta.usesUrl ? embedder.type : "OLLAMA"}
                             tagTone="b"
-                            disabled={!embedderMeta.usesUrl}
-                            value={embedder.url}
-                            placeholder={embedderMeta.usesUrl ? embedderMeta.urlHint : "OLLAMA 일 때만 사용"}
-                            onChange={(v) => onChange(["embedder", "url"], v)}
-                        />
+                            hint={
+                                usesUrl ? embedderMeta.urlHint
+                                    : embedderMeta.usesUrl
+                                        ? `Model 을 ${embedderMeta.urlModel} 로 고르면 입력할 수 있습니다.`
+                                        : `${embedder.type} 는 URL 을 쓰지 않습니다.`
+                            }
+                        >
+                            <div className={urlPrefix ? "prefixed" : undefined}>
+                                {urlPrefix && <span className="pfx">{urlPrefix}</span>}
+                                <input
+                                    type="text"
+                                    className="input"
+                                    disabled={!usesUrl}
+                                    value={stripUrlPrefix(urlPrefix, embedder.url) ?? ""}
+                                    placeholder={usesUrl ? (urlPrefix ? "onnx-community/all-MiniLM-L6-v2-ONNX" : embedderMeta.urlHint) : ""}
+                                    onChange={(e) => onChange(["embedder", "url"], urlPrefix ? withUrlPrefix(urlPrefix, e.target.value) : e.target.value)}
+                                />
+                            </div>
+                        </Field>
 
                         <SecretField
                             label="API Key"
@@ -182,7 +202,14 @@ export default function OverviewPanel({ profile, onChange }) {
                             hint={embedderMeta.usesApiKey ? undefined : `${embedder.type} 는 API Key 를 쓰지 않습니다.`}
                         />
 
-                        <Field label="Model" hint="모델을 고르면 그 모델의 기본 차원이 함께 채워집니다.">
+                        <Field
+                            label="Model"
+                            hint={
+                                embedderMeta.urlModel
+                                    ? `${embedderMeta.urlModel} 는 Hugging Face 저장소를, files 는 애플리케이션에 넣어 둔 모델 파일을 씁니다.`
+                                    : "모델을 고르면 그 모델의 기본 차원이 함께 채워집니다."
+                            }
+                        >
                             <div className="chipset">
                                 {models.map((m) => (
                                     <button
@@ -192,6 +219,9 @@ export default function OverviewPanel({ profile, onChange }) {
                                         onClick={() => {
                                             onChange(["embedder", "model"], m.id);
                                             onChange(["embedder", "dimensions"], m.def);
+                                            if (m.id === embedderMeta.urlModel && !embedder.url && embedderMeta.defaultUrl) {
+                                                onChange(["embedder", "url"], embedderMeta.defaultUrl);
+                                            }
                                         }}
                                     >
                                         <span className="chip-dot" />
@@ -222,7 +252,6 @@ export default function OverviewPanel({ profile, onChange }) {
                                         />
                                         <span className="chip-dot" />
                                         {d}
-                                        {d === modelMeta.def && <span className="chip-sub">기본</span>}
                                     </label>
                                 ))}
                             </div>

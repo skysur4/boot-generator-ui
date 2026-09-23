@@ -61,6 +61,9 @@ export const AI_DEFAULT_MODELS = {
 
 /** 이전 스펙의 타입 이름 → 현재 이름 */
 export const AI_TYPE_ALIASES = { LOCAL: "OLLAMA" };
+
+/** 타입을 바꿀 때 채워 넣는 기본 URL (없으면 URL 을 건드리지 않는다) */
+export const AI_DEFAULT_URLS = { OLLAMA: "http://localhost:11434" };
 export const MESSAGE_BROKERS = ["APP", "KAFKA", "REDIS", "NATS"];
 export const RESPONSIBILITY_SEGREGATION = ["BOTH", "COMMAND", "QUERY"];
 
@@ -68,20 +71,37 @@ export const RESPONSIBILITY_SEGREGATION = ["BOTH", "COMMAND", "QUERY"];
 export const BROKERS_NEEDING_CONNECTOR = ["KAFKA", "REDIS", "NATS"];
 
 /* ── Embedder : 임베딩 공급자 (루트, ai 와 같은 층) ──────── */
-export const EMBEDDER_TYPES = ["INTERNAL", "OLLAMA", "OPENAI", "GOOGLE"];
+export const EMBEDDER_TYPES = ["TRANSFORMERS", "OLLAMA", "OPENAI", "GOOGLE"];
 
-/** 이전 스펙의 타입 이름 → 현재 이름 (VOYAGE 는 과거 LOCAL 취급 → OLLAMA) */
-export const EMBEDDER_TYPE_ALIASES = { LOCAL: "OLLAMA", VOYAGE: "OLLAMA" };
+/** 이전 스펙의 타입 이름 → 현재 이름 */
+export const EMBEDDER_TYPE_ALIASES = { INTERNAL: "TRANSFORMERS", LOCAL: "OLLAMA", VOYAGE: "OLLAMA" };
 
 /**
- * usesUrl    : URL 입력 사용 여부 (OLLAMA 만)
+ * urlLabel   : URL 입력 라벨 (없으면 "URL")
+ * usesUrl    : URL 입력 사용 여부
+ * urlModel   : 이 모델을 골랐을 때만 URL 입력을 쓴다 (없으면 타입 전체가 사용)
+ * urlPrefix  : URL 앞에 항상 붙는 고정 문자열 (화면에서는 입력칸 왼쪽에 표시)
  * usesApiKey : API Key 입력 사용 여부
+ * defaultUrl : 타입 · 모델을 고를 때 채워 넣는 URL (urlPrefix 포함)
  */
 export const EMBEDDER_META = {
-    INTERNAL: { desc: "애플리케이션 내장 모델 (ONNX) · 외부 서버 불필요", usesUrl: false, usesApiKey: false },
-    OLLAMA:   { desc: "Ollama 서버",                                    usesUrl: true,  usesApiKey: false, urlHint: "예: http://192.168.50.200:11434" },
-    OPENAI:   { desc: "OpenAI Embeddings API",                          usesUrl: false, usesApiKey: true },
-    GOOGLE:   { desc: "Google Gemini Embeddings API",                   usesUrl: false, usesApiKey: true },
+    TRANSFORMERS: {
+        desc: "애플리케이션 내장 ONNX 런타임 · 외부 서버 불필요",
+        usesUrl: true, usesApiKey: false,
+        urlModel: "repository",
+        urlPrefix: "hf.co/",
+        urlLabel: "Repository",
+        urlHint: "Hugging Face ONNX 저장소",
+        defaultUrl: "hf.co/onnx-community/all-MiniLM-L6-v2-ONNX",
+    },
+    OLLAMA: {
+        desc: "Ollama 서버",
+        usesUrl: true, usesApiKey: false,
+        urlHint: "예: http://192.168.50.200:11434",
+        defaultUrl: "http://localhost:11434",
+    },
+    OPENAI: { desc: "OpenAI Embeddings API",        usesUrl: false, usesApiKey: true },
+    GOOGLE: { desc: "Google Gemini Embeddings API", usesUrl: false, usesApiKey: true },
 };
 
 /**
@@ -89,10 +109,9 @@ export const EMBEDDER_META = {
  * dims 의 첫 값이 아니라 def 가 기본 차원이다. 목록의 첫 모델이 타입의 기본 모델.
  */
 export const EMBEDDING_MODELS = {
-    INTERNAL: [
-        { id: "all-MiniLM-L6-v2",      dims: [384],  def: 384 },
-        { id: "multilingual-e5-base",  dims: [768],  def: 768 },
-        { id: "KURE-v1",               dims: [1024], def: 1024 },
+    TRANSFORMERS: [
+        { id: "repository", dims: [1024, 768, 512, 384], def: 384 },
+        { id: "files",      dims: [1024, 768, 512, 384], def: 384 },
     ],
     OLLAMA: [
         { id: "all-MiniLM-L6-v2",      dims: [384],  def: 384 },
@@ -117,6 +136,28 @@ export function findEmbeddingModel(type, modelId) {
 /** 타입의 기본 모델 */
 export function defaultEmbeddingModel(type) {
     return (EMBEDDING_MODELS[type] || EMBEDDING_MODELS.OPENAI)[0];
+}
+
+/** 이전 스펙의 모델 이름 → 현재 이름 */
+export const EMBEDDING_MODEL_ALIASES = { TRANSFORMERS: { onnx: "repository" } };
+
+/** 지금 설정에서 URL 입력을 쓰는가 (urlModel 이 있으면 그 모델일 때만) */
+export function embedderUsesUrl(embedder) {
+    const meta = EMBEDDER_META[embedder?.type];
+    if (!meta?.usesUrl) return false;
+    return !meta.urlModel || embedder?.model === meta.urlModel;
+}
+
+/** urlPrefix 를 뗀 값 (화면 입력칸에 보여 줄 부분) */
+export function stripUrlPrefix(prefix, value) {
+    if (!prefix || !value) return value ?? "";
+    return value.startsWith(prefix) ? value.slice(prefix.length) : value;
+}
+
+/** urlPrefix 를 붙인 값 (JSON 에 저장할 값) */
+export function withUrlPrefix(prefix, value) {
+    if (!prefix) return value;
+    return prefix + stripUrlPrefix(prefix, value ?? "");
 }
 
 /** 유사도 임계값 (%) */
@@ -158,6 +199,9 @@ export const ROLE_RULES = {
         modules: {
             allowed: ["hexagonal", "orm", "ai", "event", "notice", "openapi", "client", "embedding", "monitoring", "roles"],
             forcedOn: [],
+            /* ORM(일반 DB) 과 AI · Embedding 은 서비스를 나눈다. AI · Embedding 은 OpenAPI 필수. */
+            exclusive: { orm: ["ai", "embedding"], ai: ["orm"], embedding: ["orm"] },
+            implies: { ai: ["openapi"], embedding: ["openapi"] },
         },
         orm: {
             options: ORM_BLOCKING,
@@ -222,18 +266,27 @@ export function moduleState(role, key) {
 }
 
 /**
- * 모듈 간 관계
- *  - MODULE_EXCLUSIVE : 동시에 켤 수 없는 쌍. 한쪽을 켜면 다른 쪽이 꺼진다.
- *      ORM(datasource) 과 Embedding(vectorsource) 은 서비스를 나누고 API / MQ 로 잇는다.
- *  - MODULE_IMPLIES   : 켜면 함께 켜지고, 켜져 있는 동안 잠기는 모듈.
- *      Embedding 서비스는 API 로 노출되므로 OpenAPI 필수.
+ * 모듈 간 관계 (역할별 · ROLE_RULES.modules 참조)
+ *  - exclusive : 동시에 켤 수 없는 모듈. 한쪽을 켜면 다른 쪽이 꺼진다.
+ *      ORM(datasource) 과 AI · Embedding(vectorsource) 은 서비스를 나누고 API / MQ 로 잇는다.
+ *  - implies   : 켜면 함께 켜지고, 켜져 있는 동안 잠기는 모듈.
+ *      AI · Embedding 서비스는 API 로 노출되므로 OpenAPI 필수.
  */
-export const MODULE_EXCLUSIVE = { orm: "embedding", embedding: "orm" };
-export const MODULE_IMPLIES = { embedding: ["openapi"] };
+
+/** 이 키를 켤 때 꺼야 하는 키들 */
+export function moduleRivals(role, key) {
+    return ROLE_RULES[role]?.modules?.exclusive?.[key] || [];
+}
+
+/** 이 키를 켤 때 함께 켜야 하는 키들 */
+export function moduleImplies(role, key) {
+    return ROLE_RULES[role]?.modules?.implies?.[key] || [];
+}
 
 /** 이 키를 필수로 만드는 켜진 모듈 (없으면 null) */
-export function impliedBy(key, enabled) {
-    return Object.keys(MODULE_IMPLIES).find((src) => enabled?.[src] === true && MODULE_IMPLIES[src].includes(key)) || null;
+export function impliedBy(role, key, enabled) {
+    const implies = ROLE_RULES[role]?.modules?.implies || {};
+    return Object.keys(implies).find((src) => enabled?.[src] === true && implies[src].includes(key)) || null;
 }
 
 /**
@@ -243,7 +296,7 @@ export function impliedBy(key, enabled) {
 export function moduleStateFor(role, key, enabled) {
     const state = moduleState(role, key);
     if (state !== "editable") return { state };
-    const by = impliedBy(key, enabled);
+    const by = impliedBy(role, key, enabled);
     if (by && moduleState(role, by) !== "forcedOff") return { state: "implied", by };
     return { state };
 }
@@ -362,12 +415,16 @@ export function normalizeService(service, role) {
         if (state === "forcedOff" && enabled[key] === true) { enabled[key] = false; changed = true; }
     });
 
-    // 1-b) 상호 배타: ORM 과 Embedding 이 둘 다 켜져 있으면 ORM 을 남긴다.
+    // 1-b) 상호 배타: ORM 과 충돌하는 모듈이 함께 켜져 있으면 ORM 을 남긴다.
     //      (UI 토글은 확인 팝업을 거쳐 한쪽을 끄므로 이 경로는 기존 데이터 교정용)
-    if (enabled.orm === true && enabled.embedding === true) { enabled.embedding = false; changed = true; }
+    if (enabled.orm === true) {
+        moduleRivals(role, "orm").forEach((key) => {
+            if (enabled[key] === true) { enabled[key] = false; changed = true; }
+        });
+    }
 
-    // 1-c) 필수 동반: Embedding 이 켜져 있으면 OpenAPI 도 켠다
-    Object.entries(MODULE_IMPLIES).forEach(([src, targets]) => {
+    // 1-c) 필수 동반: AI · Embedding 이 켜져 있으면 OpenAPI 도 켠다
+    Object.entries(ROLE_RULES[role].modules.implies || {}).forEach(([src, targets]) => {
         if (enabled[src] !== true) return;
         targets.forEach((t) => {
             if (moduleState(role, t) === "editable" && enabled[t] !== true) { enabled[t] = true; changed = true; }
@@ -518,11 +575,19 @@ export function normalizeProfile(profile) {
         const e = { ...next.embedder };
         let type = EMBEDDER_TYPE_ALIASES[e.type] || e.type;
         if (!EMBEDDER_TYPES.includes(type)) type = "OPENAI";
-        let model = findEmbeddingModel(type, e.model);
+        const modelName = EMBEDDING_MODEL_ALIASES[type]?.[e.model] || e.model;
+        let model = findEmbeddingModel(type, modelName);
         if (!model) model = defaultEmbeddingModel(type);
         const dims = model.dims.includes(Number(e.dimensions)) ? Number(e.dimensions) : model.def;
-        if (e.type !== type || e.model !== model.id || e.dimensions !== dims) {
-            e.type = type; e.model = model.id; e.dimensions = dims;
+
+        /* urlPrefix 가 있는 타입은 URL 이 항상 그 접두어로 시작한다 */
+        const prefix = EMBEDDER_META[type]?.urlPrefix;
+        const url = prefix && embedderUsesUrl({ type, model: model.id }) && e.url
+            ? withUrlPrefix(prefix, e.url)
+            : e.url;
+
+        if (e.type !== type || e.model !== model.id || e.dimensions !== dims || e.url !== url) {
+            e.type = type; e.model = model.id; e.dimensions = dims; e.url = url;
             next.embedder = e;
             changed = true;
         }

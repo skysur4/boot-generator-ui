@@ -1,7 +1,7 @@
 import React from "react";
 import {
     ROLE, ROLE_RULES, MODULE_KEYS, MODULE_META, moduleStateFor,
-    MODULE_EXCLUSIVE, MODULE_IMPLIES, moduleState,
+    moduleRivals, moduleImplies, moduleState,
     DATABASES, RESPONSIBILITY_SEGREGATION,
     VECTOR_STORES,
     createInterServer,
@@ -216,29 +216,32 @@ export default function ServiceCard({
     const clientOn = service.enabled?.client === true && Array.isArray(service.interServers);
     const interServers = Array.isArray(service.interServers) ? service.interServers : [];
 
-    /* 모듈 토글: 상호 배타(ORM ↔ Embedding)와 필수 동반(Embedding → OpenAPI)을 함께 처리 */
+    /* 모듈 토글: 상호 배타(ORM ↔ AI · Embedding)와 필수 동반(→ OpenAPI)을 함께 처리 */
     const BLOCK_OF = { orm: "orm · datasource", embedding: "vectorsource" };
     const toggleModule = async (key, value) => {
-        const rival = MODULE_EXCLUSIVE[key];
-        if (value && rival && service.enabled?.[rival] === true) {
+        const rivals = moduleRivals(role, key).filter((r) => service.enabled?.[r] === true);
+        if (value && rivals.length > 0) {
+            const names = rivals.map((r) => MODULE_META[r].label).join(" · ");
+            const blocks = rivals.map((r) => BLOCK_OF[r]).filter(Boolean).join(" · ");
             const ok = await confirm({
                 title: `${MODULE_META[key].label} 켜기`,
                 message: (
                     <>
-                        <b>{MODULE_META[key].label}</b> · <b>{MODULE_META[rival].label}</b> 은(는) 한 서비스에서 함께 쓸 수 없습니다.
-                        켜면 <b>{MODULE_META[rival].label}</b> 이(가) 꺼지고 <span className="mono">{BLOCK_OF[rival]}</span> 설정이 삭제됩니다.
+                        <b>{MODULE_META[key].label}</b> · <b>{names}</b> 은(는) 한 서비스에서 함께 쓸 수 없습니다.
+                        켜면 <b>{names}</b> 이(가) 꺼지고
+                        {blocks ? <> <span className="mono">{blocks}</span> 설정이 삭제됩니다.</> : <> 해당 기능이 빠집니다.</>}
                     </>
                 ),
                 detail: "두 기능이 모두 필요하면 서비스를 나누고 API 또는 MQ 로 연결하세요.",
-                confirmText: `${MODULE_META[rival].label} 끄고 켜기`,
+                confirmText: `${names} 끄고 켜기`,
                 tone: "warn",
             });
             if (!ok) return;
-            onChange(at("enabled", rival), false);
+            rivals.forEach((r) => onChange(at("enabled", r), false));
         }
         onChange(at("enabled", key), value);
         if (value) {
-            (MODULE_IMPLIES[key] || []).forEach((t) => {
+            moduleImplies(role, key).forEach((t) => {
                 if (moduleState(role, t) === "editable") onChange(at("enabled", t), true);
             });
         }
@@ -418,8 +421,11 @@ export default function ServiceCard({
                         <b>{rules.modules.allowed.map((k) => MODULE_META[k].label).join(" · ")}</b>{" "}
                         {rules.modules.allowed.length}개 선택 가능.{" "}
                         <b>{rules.modules.allowed.includes("embedding") ? "ORM · Embedding · Client" : "ORM · Client"}</b> 토글은 바로 위의 설정 블록을 통째로 켜고 끕니다.
-                        {rules.modules.allowed.includes("embedding") && (
-                            <> <b>ORM</b> 과 <b>Embedding</b> 은 함께 켤 수 없고, Embedding 을 켜면 <b>Open API</b> 가 필수로 켜집니다.</>
+                        {moduleRivals(role, "orm").length > 0 && (
+                            <>
+                                {" "}<b>ORM</b> 과 <b>{moduleRivals(role, "orm").map((k) => MODULE_META[k].label).join(" · ")}</b> 은(는)
+                                함께 켤 수 없고, 켜면 <b>Open API</b> 가 필수로 켜집니다.
+                            </>
                         )}
                     </>
                 }
@@ -433,8 +439,9 @@ export default function ServiceCard({
                             const { state, by } = moduleStateFor(role, key, service.enabled);
                             const meta = MODULE_META[key];
                             const locked = state !== "editable";
-                            const rival = MODULE_EXCLUSIVE[key];
-                            const rivalOn = rival && state === "editable" && service.enabled?.[rival] === true;
+                            const rivalsOn = state === "editable"
+                                ? moduleRivals(role, key).filter((r) => service.enabled?.[r] === true)
+                                : [];
                             return (
                                 <Toggle
                                     key={key}
@@ -443,7 +450,8 @@ export default function ServiceCard({
                                         state === "forcedOn" ? "항상 켜짐 · 변경 불가"
                                             : state === "implied" ? `${MODULE_META[by].label} 사용 시 필수`
                                                 : state === "forcedOff" ? `${role === ROLE.BACKEND ? "Gateway / Notification" : "Backend"} 전용`
-                                                    : rivalOn && !service.enabled?.[key] ? `켜면 ${MODULE_META[rival].label} 꺼짐`
+                                                    : rivalsOn.length > 0 && !service.enabled?.[key]
+                                                        ? `켜면 ${rivalsOn.map((r) => MODULE_META[r].label).join(" · ")} 꺼짐`
                                                         : meta.desc
                                     }
                                     checked={state === "forcedOn" || state === "implied" ? true : state === "forcedOff" ? false : !!service.enabled?.[key]}
