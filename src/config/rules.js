@@ -55,7 +55,7 @@ export const AI_TYPES = ["OLLAMA", "OPENAI", "ANTHROPIC", "GOOGLE"];
 export const AI_DEFAULT_MODELS = {
     OLLAMA:    "meta-llama/Llama-3.2-1B",
     OPENAI:    "gpt-4o-mini",
-    ANTHROPIC: "claude-3-5-sonnet",
+    ANTHROPIC: "claude-sonnet-5",
     GOOGLE:    "gemini-2.5-flash",
 };
 
