@@ -236,9 +236,9 @@ export default function OverviewPanel({ profile, onChange }) {
                             value={embedder.similarity}
                             onChange={(v) => onChange(["embedder", "similarity"], v)}
                             marks={[
-                                { value: 50, label: "50 넓게" },
-                                { value: 70, label: "70 기본" },
-                                { value: 85, label: "85 엄격" },
+                                { value: 50, label: "50 부드럽게" },
+                                { value: 70, label: "70 단단하게" },
+                                { value: 85, label: "85 딱딱하게" },
                             ]}
                             hint="검색 결과로 채택할 최소 유사도입니다. 높일수록 정확하지만 결과가 줄어듭니다."
                         />
