@@ -9,6 +9,7 @@ export const ROLE = {
     BACKEND: "backend",
     GATEWAY: "gateway",
     NOTIFICATION: "notification",
+    EVENT: "event",
 };
 
 /* ── 모듈(enabled) 메타 ──────────────────────────────────── */
@@ -31,13 +32,13 @@ export const MODULE_META = {
     authentication: { label: "Authentication", desc: "인증 연동" },
     session:        { label: "Session",        desc: "세션 사용" },
     roles:          { label: "Roles",          desc: "롤 적용" },
-    orm:            { label: "ORM",            desc: "일반 DB 사용" },
+    orm:            { label: "ORM",            desc: "DB 연결" },
     ai:             { label: "AI",             desc: "AI 연동" },
     event:          { label: "Event",          desc: "이벤트 발송" },
     notice:         { label: "Notice",         desc: "알림 발송" },
     client:         { label: "Client",         desc: "외부 API 호출" },
     openapi:        { label: "Open API",       desc: "API 외부 공유" },
-    embedding:      { label: "Embedding",      desc: "벡터 DB 사용" },
+    embedding:      { label: "Embedding",      desc: "공간화 연동" },
     monitoring:     { label: "Monitoring",     desc: "Otel 연동" },
     hexagonal:      { label: "Hexagonal",      desc: "헥사고널 패턴 사용" },
 };
@@ -208,7 +209,7 @@ export const ROLE_RULES = {
             tag: "BLOCKING",
             tagTone: "g",
             note: "Backend 는 블로킹 스택이라 R2DBC 를 쓰지 않습니다.",
-            blockedNote: "R2DBC 는 Reactive 전용 — Gateway / Notification 에서만 사용",
+            blockedNote: "R2DBC 는 Reactive 전용 — Gateway / Notification / Event 에서만 사용",
         },
         hasResponsibilitySegregation: true,
         optionalSections: [],
@@ -221,7 +222,7 @@ export const ROLE_RULES = {
         sectionDesc: "단일 객체 · 최대 1개",
         isArray: false,
         modules: {
-            allowed: ["orm", "ai", "client", "monitoring", "session", "authentication"],
+            allowed: ["orm", "client", "monitoring", "session", "authentication"],
             forcedOn: ["hexagonal"],
         },
         orm: {
@@ -242,7 +243,7 @@ export const ROLE_RULES = {
         sectionDesc: "단일 객체 · 최대 1개",
         isArray: false,
         modules: {
-            allowed: ["orm", "ai", "client", "monitoring"],
+            allowed: ["client", "monitoring"],
             forcedOn: ["hexagonal", "notice"],
         },
         orm: {
@@ -251,6 +252,27 @@ export const ROLE_RULES = {
             tagTone: "v",
             note: "Reactive 스택이라 R2DBC 만 사용합니다.",
             blockedNote: "Notification 은 Reactive 스택 — 블로킹 ORM 사용 불가",
+        },
+        hasResponsibilitySegregation: false,
+        optionalSections: [],
+    },
+    [ROLE.EVENT]: {
+        label: "Event",
+        roleBadge: "EVENT",
+        tone: "v",
+        path: "event",
+        sectionDesc: "단일 객체 · 최대 1개",
+        isArray: false,
+        modules: {
+            allowed: ["client", "monitoring"],
+            forcedOn: ["hexagonal", "event"],
+        },
+        orm: {
+            options: ORM_REACTIVE,
+            tag: "REACTIVE",
+            tagTone: "v",
+            note: "Reactive 스택이라 R2DBC 만 사용합니다.",
+            blockedNote: "Event 는 Reactive 스택 — 블로킹 ORM 사용 불가",
         },
         hasResponsibilitySegregation: false,
         optionalSections: [],
@@ -356,7 +378,7 @@ export function createVectorSource() {
         useTls: false,
         docName: "vector_store",
         fieldName: "content",
-        databaseName: "default",
+        databaseName: null,
         username: null,
         password: null,
         initializeSchema: false,
@@ -487,7 +509,7 @@ function isObject(v) {
 const PROFILE_KEY_ORDER = [
     "editedAt", "description", "group", "version", "basePath",
     "messageBroker", "authenticator", "ai", "embedder",
-    "externalConnectors", "projects", "gateway", "notification",
+    "externalConnectors", "projects", "gateway", "notification", "event",
 ];
 const SERVICE_KEY_ORDER = [
     "name", "desc", "localPort", "enabled",
@@ -543,7 +565,7 @@ export function normalizeProfile(profile) {
         const projects = next.projects.map((s) => normalizeService(s, ROLE.BACKEND) || s);
         if (projects.some((s, i) => s !== next.projects[i])) { next.projects = projects; changed = true; }
     }
-    [[ROLE.GATEWAY, "gateway"], [ROLE.NOTIFICATION, "notification"]].forEach(([role, key]) => {
+    [[ROLE.GATEWAY, "gateway"], [ROLE.NOTIFICATION, "notification"], [ROLE.EVENT, "event"]].forEach(([role, key]) => {
         if (!isObject(next[key])) return;
         const fixed = normalizeService(next[key], role);
         if (fixed) { next[key] = fixed; changed = true; }
@@ -554,6 +576,7 @@ export function normalizeProfile(profile) {
         ...(Array.isArray(next.projects) ? next.projects : []),
         next.gateway,
         next.notification,
+        next.event,
     ].filter(isObject);
 
     if (services.some((s) => s?.enabled?.embedding === true) && !isObject(next.embedder)) {
@@ -603,6 +626,7 @@ export function orderProfileKeys(profile) {
     if (Array.isArray(next.projects)) next.projects = next.projects.map(orderServiceKeys);
     if (isObject(next.gateway)) next.gateway = orderServiceKeys(next.gateway);
     if (isObject(next.notification)) next.notification = orderServiceKeys(next.notification);
+    if (isObject(next.event)) next.event = orderServiceKeys(next.event);
     return reorder(next, PROFILE_KEY_ORDER);
 }
 
@@ -663,6 +687,7 @@ export function anyMonitoringEnabled(profile) {
         ...(Array.isArray(profile.projects) ? profile.projects : []),
         profile.gateway,
         profile.notification,
+        profile.event,
     ];
     return services.some((s) => s?.enabled?.monitoring === true);
 }

@@ -48,7 +48,7 @@ export default function ProfileDetail({
     }
 
     const projectCount = Array.isArray(profile.projects) ? profile.projects.length : 0;
-    const serviceCount = projectCount + (profile.gateway ? 1 : 0) + (profile.notification ? 1 : 0);
+    const serviceCount = projectCount + (profile.gateway ? 1 : 0) + (profile.notification ? 1 : 0) + (profile.event ? 1 : 0);
     const connectorCount = Array.isArray(profile.externalConnectors) ? profile.externalConnectors.length : 0;
     const counts = { overview: undefined, services: serviceCount, connectors: connectorCount };
 

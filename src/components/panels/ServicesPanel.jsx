@@ -2,12 +2,13 @@ import React from "react";
 import { ROLE, ROLE_RULES, createService } from "../../config/rules";
 import ServiceCard from "../ServiceCard";
 import { SectionHead, AddButton, EmptyBox } from "../ui/primitives";
-import { IconBox, IconGateway, IconBell } from "../ui/icons";
+import { IconBox, IconGateway, IconBell, IconEvent } from "../ui/icons";
 
 const SECTION_ICON = {
     [ROLE.BACKEND]: IconBox,
     [ROLE.GATEWAY]: IconGateway,
     [ROLE.NOTIFICATION]: IconBell,
+    [ROLE.EVENT]: IconEvent,
 };
 
 function Section({ role, children, onAdd, addLabel }) {
@@ -55,8 +56,8 @@ export default function ServicesPanel({ profile, onChange }) {
                 ))}
             </Section>
 
-            {[ROLE.GATEWAY, ROLE.NOTIFICATION].map((role) => {
-                const key = ROLE_RULES[role].path;   // 'gateway' | 'notification'
+            {[ROLE.GATEWAY, ROLE.NOTIFICATION, ROLE.EVENT].map((role) => {
+                const key = ROLE_RULES[role].path;   // 'gateway' | 'notification' | 'event'
                 const service = profile[key];
                 return (
                     <Section

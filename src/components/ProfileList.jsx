@@ -26,6 +26,7 @@ function summarize(profile) {
     const parts = [`${backends} backend`];
     if (profile.gateway) parts.push("+gateway");
     if (profile.notification) parts.push("+notifier");
+    if (profile.event) parts.push("+event");
     return parts.join(" · ");
 }
 

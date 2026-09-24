@@ -107,6 +107,21 @@ export default function OverviewPanel({ profile, onChange }) {
                     </CardBody>
                 </Card>
 
+                {/* Messaging */}
+                <Card>
+                    <CardHead icon={<IconPulse size={13} />} title="Event Delivery" hint="messageBroker" />
+                    <CardBody>
+                        <SegmentedField
+                            label="Message Broker"
+                            name="message-broker"
+                            value={profile.messageBroker}
+                            options={MESSAGE_BROKERS}
+                            onChange={(v) => onChange(["messageBroker"], v)}
+                            hint="이벤트 및 알림 발행자는 이 값을 그대로 따릅니다."
+                        />
+                    </CardBody>
+                </Card>
+
                 {/* AI */}
                 <Card>
                     <CardHead icon={<IconSparkles size={13} />} title="AI Provider" hint="ai" />
@@ -276,21 +291,6 @@ export default function OverviewPanel({ profile, onChange }) {
                             채팅 모델(AI Provider)과 임베딩 공급자는 서로 묶이지 않습니다.
                             서비스의 <b>Embedding</b> 토글이 하나라도 켜져 있을 때 사용됩니다.
                         </div>
-                    </CardBody>
-                </Card>
-
-                {/* Messaging */}
-                <Card>
-                    <CardHead icon={<IconPulse size={13} />} title="Messaging" hint="messageBroker" />
-                    <CardBody>
-                        <SegmentedField
-                            label="Message Broker"
-                            name="message-broker"
-                            value={profile.messageBroker}
-                            options={MESSAGE_BROKERS}
-                            onChange={(v) => onChange(["messageBroker"], v)}
-                            hint="이벤트 발행자는 이 값을 그대로 따릅니다."
-                        />
                     </CardBody>
                 </Card>
 

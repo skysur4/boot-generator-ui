@@ -11,13 +11,14 @@ import { useConfirm } from "./ConfirmDialog";
 import { Field, TextField, NumberField, SecretField, SegmentedField, ChipRadioField, Toggle, ListRow } from "./ui/fields";
 import {
     IconBox, IconGateway, IconBell, IconDatabase, IconServers, IconFilter,
-    IconLayers, IconPlus, IconTrash, IconWarn, IconVector,
+    IconLayers, IconPlus, IconTrash, IconWarn, IconVector, IconEvent
 } from "./ui/icons";
 
 const ROLE_ICON = {
     [ROLE.BACKEND]: IconBox,
     [ROLE.GATEWAY]: IconGateway,
     [ROLE.NOTIFICATION]: IconBell,
+    [ROLE.EVENT]: IconEvent,
 };
 
 /* ── 접힌 상태 요약 배지 ─────────────────────────────────── */
@@ -194,7 +195,7 @@ function VectorStoreCard({ value, basePath, onChange }) {
 export default function ServiceCard({
     role,
     service,
-    basePath,          // ['projects', i] | ['gateway'] | ['notification']
+    basePath,          // ['projects', i] | ['gateway'] | ['notification'] | ['event']
     index,
     defaultOpen = false,
     onChange,
@@ -449,7 +450,7 @@ export default function ServiceCard({
                                     desc={
                                         state === "forcedOn" ? "항상 켜짐 · 변경 불가"
                                             : state === "implied" ? `${MODULE_META[by].label} 사용 시 필수`
-                                                : state === "forcedOff" ? `${role === ROLE.BACKEND ? "Gateway / Notification" : "Backend"} 전용`
+                                                : state === "forcedOff" ? `${key === 'authentication' || key === 'session' ? "Gateway 전용" : (key === 'roles' ? "Backend 전용" : "사용 불가")}`
                                                     : rivalsOn.length > 0 && !service.enabled?.[key]
                                                         ? `켜면 ${rivalsOn.map((r) => MODULE_META[r].label).join(" · ")} 꺼짐`
                                                         : meta.desc
