@@ -85,7 +85,7 @@ export default function ProfileDetail({
                         <Badge mono>{versionText}</Badge>
                         {profile.authenticator?.type && <Badge tone="b" mono>{profile.authenticator.type}</Badge>}
                         {profile.ai?.type && <Badge tone="v" mono>{profile.ai.type}</Badge>}
-                        {profile.messageBroker && <Badge mono>{profile.messageBroker}</Badge>}
+                        {profile.messageBroker.type && <Badge mono>{profile.messageBroker.type}</Badge>}
                         {editedAt && <Badge><IconClock size={12} />{editedAt}</Badge>}
                     </div>
                 </div>

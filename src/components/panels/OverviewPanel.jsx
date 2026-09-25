@@ -114,7 +114,7 @@ export default function OverviewPanel({ profile, onChange }) {
                         <SegmentedField
                             label="Message Broker"
                             name="message-broker"
-                            value={profile.messageBroker}
+                            value={profile.messageBroker.type}
                             options={MESSAGE_BROKERS}
                             onChange={(v) => onChange(["messageBroker"], v)}
                             hint="이벤트 및 알림 발행자는 이 값을 그대로 따릅니다."

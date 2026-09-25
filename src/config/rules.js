@@ -65,7 +65,7 @@ export const AI_TYPE_ALIASES = { LOCAL: "OLLAMA" };
 
 /** 타입을 바꿀 때 채워 넣는 기본 URL (없으면 URL 을 건드리지 않는다) */
 export const AI_DEFAULT_URLS = { OLLAMA: "http://localhost:11434" };
-export const MESSAGE_BROKERS = ["APP", "KAFKA", "REDIS", "NATS"];
+export const MESSAGE_BROKERS = ["KAFKA", "NATS", "REDIS", "APP"];
 export const RESPONSIBILITY_SEGREGATION = ["BOTH", "COMMAND", "QUERY"];
 
 /** 커넥터가 필요해지는 messageBroker 값 (APP 은 인메모리라 불필요) */
@@ -638,7 +638,7 @@ export function orderProfileKeys(profile) {
  */
 export function connectorPurpose(name, profile) {
     const key = String(name || "").toLowerCase();
-    const broker = profile?.messageBroker;
+    const broker = profile?.messageBroker.type;
 
     /* Message Broker — messageBroker 가 그 브로커일 때만 사용된다 */
     const matched = ["kafka", "redis", "nats"].find((b) => key.includes(b));
