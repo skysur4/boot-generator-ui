@@ -100,16 +100,12 @@ export default function OverviewPanel({ profile, onChange }) {
                             />
                         </Field>
 
-                        <Field label="Docker Compose">
+                        <Field label="Serverly Authentication">
                             <Toggle
-                                name="Docker Compose"
-                                //desc="인프라 compose 파일 생성"
-                                //checked={profile.dockerCompose}
-                                desc="미지원"
-                                checked={false}
-                                locked={true}
-                                // 사용 시 위 3줄 삭제 및 desc checked 주석 해제
-                                onChange={(v) => onChange(["dockerCompose"], v)}
+                                name="Inter Server Key"
+                                desc="내부 서버 간 통신키 확인"
+                                checked={profile.interServerKey}
+                                onChange={(v) => onChange(["interServerKey"], v)}
                             />
                         </Field>
                     </div>

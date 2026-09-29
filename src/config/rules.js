@@ -542,7 +542,7 @@ function isObject(v) {
  * 같은 모양의 JSON 을 받게 한다. 목록에 없는 키는 원래 순서대로 뒤에 붙는다.
  */
 const PROFILE_KEY_ORDER = [
-    "editedAt", "description", "group", "version", "basePath", "watermark", "purge", "dockerCompose",
+    "editedAt", "description", "group", "version", "basePath", "watermark", "purge", "interServerKey",
     "messageBroker", "otel", "authenticator", "ai", "embedder",
     "externalConnectors", "projects", "gateway", "notification", "scheduler",
 ];
