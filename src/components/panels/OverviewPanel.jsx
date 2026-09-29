@@ -7,12 +7,12 @@ import {
     embedderUsesUrl, stripUrlPrefix, withUrlPrefix,
     SIMILARITY_MIN, SIMILARITY_MAX,
 } from "../../config/rules";
-import { Card, CardHead, CardBody, SubGroup } from "../ui/primitives";
+import { Card, CardHead, CardBody, FoldCard, SubGroup, Note } from "../ui/primitives";
 import {
     Field, TextField, NumberField, SecretField, SegmentedField, Toggle,
     TextAreaField, RangeField,
 } from "../ui/fields";
-import { IconFile, IconLock, IconSparkles, IconPulse, IconVector, IconMonitor } from "../ui/icons";
+import { IconFile, IconLock, IconSparkles, IconPulse, IconVector, IconMonitor, IconWarn } from "../ui/icons";
 
 export default function OverviewPanel({ profile, onChange }) {
     const version = profile.version || {};
@@ -38,26 +38,25 @@ export default function OverviewPanel({ profile, onChange }) {
 
     return (
         <div className="panel">
-            <div className="grid-cards">
 
-                {/* 프로필 메타 */}
-                <Card>
-                    <CardHead icon={<IconFile size={13} />} title="Profile Meta" hint="root" />
-                    <CardBody>
-                        <TextField label="Description" ui value={profile.description} onChange={(v) => onChange(["description"], v)} />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-[10px]">
-                            <TextField label="Group" value={profile.group} onChange={(v) => onChange(["group"], v)} />
-                            <TextField label="Base Path" value={profile.basePath} onChange={(v) => onChange(["basePath"], v)} />
+            {/* 프로필 메타 — 항상 펼쳐진 채로 맨 위 전체 폭 */}
+            <Card className="meta-card">
+                <CardHead icon={<IconFile size={13} />} title="Profile Meta" hint="root" />
+                <CardBody>
+                    <div className="meta-grid">
+                        <div style={{ gridColumn: "span 2" }}>
+                            <TextField label="Description" ui value={profile.description} onChange={(v) => onChange(["description"], v)} />
                         </div>
+                        <TextField label="Group" value={profile.group} onChange={(v) => onChange(["group"], v)} />
 
-                        <Field label="Version" tag="version" tagTone="b">
-                            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                        <Field label="Version" tag={versionText} tagTone="b">
+                            <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                                 {["major", "minor", "patch"].map((key, i) => (
                                     <React.Fragment key={key}>
                                         {i > 0 && <span style={{ color: "var(--fg-3)" }}>.</span>}
                                         <input
                                             className="input"
-                                            style={{ width: 64, textAlign: "center" }}
+                                            style={{ width: 56, textAlign: "center" }}
                                             title={key}
                                             inputMode="numeric"
                                             value={version[key] ?? 0}
@@ -69,26 +68,63 @@ export default function OverviewPanel({ profile, onChange }) {
                                         />
                                     </React.Fragment>
                                 ))}
-                                <span className="badge badge-mono" style={{ marginLeft: 4 }}>{versionText}</span>
-                            </div>
-                            <div style={{ marginTop: 8 }}>
-                                <Toggle
-                                    name="Versionable"
-                                    desc="패키지 및 클래스 버전 사용"
-                                    checked={version.versionable}
-                                    onChange={(v) => onChange(["version", "versionable"], v)}
-                                />
                             </div>
                         </Field>
 
-                        <TextField label="Edited At" value={profile.editedAt} onChange={() => {}} disabled />
-                    </CardBody>
-                </Card>
+                        <TextField label="Base Path" value={profile.basePath} onChange={(v) => onChange(["basePath"], v)} />
+
+                        <Field label="Versionable">
+                            <Toggle
+                                name="Versionable"
+                                desc="패키지 및 클래스 버전 사용"
+                                checked={version.versionable}
+                                onChange={(v) => onChange(["version", "versionable"], v)}
+                            />
+                        </Field>
+
+                        <Field label="Watermark">
+                            <Toggle
+                                name="Watermark"
+                                desc="생성 시각 주석 삽입"
+                                checked={profile.watermark}
+                                onChange={(v) => onChange(["watermark"], v)}
+                            />
+                        </Field>
+
+                        <Field label="Purge">
+                            <Toggle
+                                name="Purge"
+                                desc="생성 전 모듈 폴더 비우기"
+                                checked={profile.purge}
+                                onChange={(v) => onChange(["purge"], v)}
+                            />
+                        </Field>
+
+                        <Field label="Docker Compose">
+                            <Toggle
+                                name="Docker Compose"
+                                desc="인프라 compose 파일 생성"
+                                checked={profile.dockerCompose}
+                                onChange={(v) => onChange(["dockerCompose"], v)}
+                            />
+                        </Field>
+                    </div>
+
+                    {profile.purge === true && (
+                        <div style={{ marginTop: 12 }}>
+                            <Note warn icon={<IconWarn size={15} />}>
+                                <b>Purge 가 켜져 있습니다.</b> 생성 전에 모듈 폴더를 비웁니다. 직접 고친 코드가 있으면 함께 사라집니다.
+                            </Note>
+                        </div>
+                    )}
+
+                </CardBody>
+            </Card>
+
+            <div className="grid-cards">
 
                 {/* Authenticator */}
-                <Card>
-                    <CardHead icon={<IconLock size={13} />} title="ID Provider" hint="authenticator" />
-                    <CardBody>
+                <FoldCard icon={<IconLock size={13} />} title="ID Provider" hint="authenticator">
                         <SegmentedField
                             label="Type"
                             name="auth-type"
@@ -111,13 +147,10 @@ export default function OverviewPanel({ profile, onChange }) {
                         <TextField label="Server URL" value={authenticator.serverUrl} onChange={(v) => onChange(["authenticator", "serverUrl"], v)} />
                         <TextField label="Client Id" value={authenticator.clientId} onChange={(v) => onChange(["authenticator", "clientId"], v)} />
                         <SecretField label="Client Secret" value={authenticator.clientSecret} onChange={(v) => onChange(["authenticator", "clientSecret"], v)} />
-                    </CardBody>
-                </Card>
+                </FoldCard>
 
                 {/* AI */}
-                <Card>
-                    <CardHead icon={<IconSparkles size={13} />} title="AI Provider" hint="ai" />
-                    <CardBody>
+                <FoldCard icon={<IconSparkles size={13} />} title="AI Provider" hint="ai">
                         <SegmentedField
                             label="Type"
                             name="ai-type"
@@ -154,13 +187,10 @@ export default function OverviewPanel({ profile, onChange }) {
                             onChange={(v) => onChange(["ai", "systemPrompt"], v)}
                             hint="생성되는 서비스의 기본 시스템 프롬프트로 들어갑니다."
                         />
-                    </CardBody>
-                </Card>
+                </FoldCard>
 
                 {/* Embedder */}
-                <Card>
-                    <CardHead icon={<IconVector size={13} />} title="Embedding Provider" hint="ai embedding" />
-                    <CardBody>
+                <FoldCard icon={<IconVector size={13} />} title="Embedding Provider" hint="ai embedding">
                         <SegmentedField
                             label="Type"
                             name="embedder-type"
@@ -283,13 +313,10 @@ export default function OverviewPanel({ profile, onChange }) {
                             채팅 모델(AI Provider)과 임베딩 공급자는 서로 묶이지 않습니다.
                             서비스의 <b>Embedding</b> 토글이 하나라도 켜져 있을 때 사용됩니다.
                         </div>
-                    </CardBody>
-                </Card>
+                </FoldCard>
 
                 {/* Infrastructure : Message Broker + OTel Collector */}
-                <Card>
-                    <CardHead icon={<IconPulse size={13} />} title="Infra Provider" hint="mq · otel" />
-                    <CardBody>
+                <FoldCard icon={<IconPulse size={13} />} title="Infra Provider" hint="mq · otel">
                         <SubGroup icon={<IconPulse size={13} />}>Message Broker</SubGroup>
                         <SegmentedField
                             label="Type"
@@ -371,8 +398,7 @@ export default function OverviewPanel({ profile, onChange }) {
                                 ))}
                             </div>
                         </Field>
-                    </CardBody>
-                </Card>
+                </FoldCard>
 
             </div>
         </div>

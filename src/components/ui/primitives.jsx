@@ -30,6 +30,27 @@ export function CardHead({ icon, title, hint, actions }) {
     );
 }
 
+/** 접히는 카드 — 머리를 누르면 본문이 열리고 닫힌다 (Services 의 Accordion 과 같은 감각) */
+export function FoldCard({ icon, title, hint, defaultOpen = true, children, style, className = "" }) {
+    const [open, setOpen] = React.useState(defaultOpen);
+    return (
+        <div className={`card fold ${open ? "open" : ""} ${className}`} style={style}>
+            <button
+                type="button"
+                className="card-head card-head-btn"
+                onClick={() => setOpen((o) => !o)}
+                aria-expanded={open}
+            >
+                {icon && <span className="card-ico">{icon}</span>}
+                <h3 className="card-title">{title}</h3>
+                {hint && <span className="card-hint" style={{ marginLeft: "auto" }}>{hint}</span>}
+                <IconChevronDown size={15} className="card-caret" />
+            </button>
+            {open && <CardBody>{children}</CardBody>}
+        </div>
+    );
+}
+
 export function CardBody({ children, className = "" }) {
     return <div className={`card-body ${className}`}>{children}</div>;
 }

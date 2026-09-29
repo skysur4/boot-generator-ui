@@ -73,6 +73,7 @@ export default function ServicesPanel({ profile, onChange }) {
                                 basePath={[key]}
                                 defaultOpen
                                 onChange={onChange}
+                                onRemove={() => onChange([key], null)}
                             />
                         ) : (
                             <EmptyBox>{ROLE_RULES[role].label} 없음</EmptyBox>

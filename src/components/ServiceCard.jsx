@@ -97,8 +97,8 @@ function InterServerCard({ value, index, basePath, tone, onChange, onRemove }) {
             <AddButton onClick={() => setDomains([...domains, ""])}>Domain 추가</AddButton>
 
             <div className="acc-foot">
-                <button type="button" className="btn btn-sm btn-danger" onClick={onRemove}>
-                    <IconTrash size={13} />Inter Server {index + 1} 삭제
+                <button type="button" className="btn btn-sm btn-danger-glow" onClick={onRemove}>
+                    <IconTrash size={13} />{value.name || `Inter Server ${index + 1}`} 삭제
                 </button>
             </div>
         </Accordion>
@@ -248,10 +248,13 @@ export default function ServiceCard({
         }
     };
 
+    const serviceLabel = service.name
+        || (rules.isArray ? `${rules.label} ${String(index + 1).padStart(2, "0")}` : rules.label);
+
     const removeService = async () => {
         const ok = await confirm({
             title: `${rules.label} 삭제`,
-            message: <><b>{service.name || "(이름 없음)"}</b> 을(를) 목록에서 삭제합니다.</>,
+            message: <><b>{serviceLabel}</b> 을(를) 목록에서 삭제합니다.</>,
             detail: "Push 전까지는 서버에 반영되지 않습니다.",
             confirmText: "삭제",
             tone: "danger",
@@ -475,8 +478,8 @@ export default function ServiceCard({
             </Card>
             {onRemove && (
                 <div className="acc-foot">
-                    <button type="button" className="btn btn-sm btn-danger" onClick={removeService}>
-                        <IconTrash size={13} />{rules.label} {String(index + 1).padStart(2, "0")} 삭제
+                    <button type="button" className="btn btn-sm btn-danger-glow" onClick={removeService}>
+                        <IconTrash size={13} />{serviceLabel} 삭제
                     </button>
                 </div>
             )}
