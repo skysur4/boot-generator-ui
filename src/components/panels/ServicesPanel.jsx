@@ -8,7 +8,7 @@ const SECTION_ICON = {
     [ROLE.BACKEND]: IconBox,
     [ROLE.GATEWAY]: IconGateway,
     [ROLE.NOTIFICATION]: IconBell,
-    [ROLE.EVENT]: IconEvent,
+    [ROLE.SCHEDULER]: IconEvent,
 };
 
 function Section({ role, children, onAdd, addLabel }) {
@@ -56,7 +56,7 @@ export default function ServicesPanel({ profile, onChange }) {
                 ))}
             </Section>
 
-            {[ROLE.GATEWAY, ROLE.NOTIFICATION, ROLE.EVENT].map((role) => {
+            {[ROLE.GATEWAY, ROLE.NOTIFICATION, ROLE.SCHEDULER].map((role) => {
                 const key = ROLE_RULES[role].path;   // 'gateway' | 'notification' | 'event'
                 const service = profile[key];
                 return (

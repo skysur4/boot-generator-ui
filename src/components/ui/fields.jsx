@@ -1,5 +1,5 @@
 import React from "react";
-import { IconEye, IconEyeOff, IconLock, IconGrip, IconX } from "./icons";
+import { IconEye, IconEyeOff, IconLock, IconGrip, IconX, IconChevronDown } from "./icons";
 
 let uid = 0;
 const nextId = () => `f${++uid}`;
@@ -186,6 +186,32 @@ export function SegmentedField({
                         </React.Fragment>
                     );
                 })}
+            </div>
+        </Field>
+    );
+}
+
+/* ── 선택 상자 ───────────────────────────────────────────── */
+export function SelectField({
+    label, value, options, onChange, hint, tag, tagTone, disabled, placeholder,
+}) {
+    return (
+        <Field label={label} hint={hint} tag={tag} tagTone={tagTone}>
+            <div className="selectwrap">
+                <select
+                    className="input select"
+                    value={value ?? ""}
+                    disabled={disabled}
+                    onChange={(e) => onChange(e.target.value)}
+                >
+                    {placeholder && <option value="" disabled>{placeholder}</option>}
+                    {options.map((option) => {
+                        const id = typeof option === "string" ? option : option.value;
+                        const text = typeof option === "string" ? option : option.label;
+                        return <option key={id} value={id} disabled={option.disabled}>{text}</option>;
+                    })}
+                </select>
+                <IconChevronDown size={14} className="select-caret" />
             </div>
         </Field>
     );

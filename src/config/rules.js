@@ -9,14 +9,17 @@ export const ROLE = {
     BACKEND: "backend",
     GATEWAY: "gateway",
     NOTIFICATION: "notification",
-    EVENT: "event",
+    SCHEDULER: "scheduler",
 };
 
 /* ── 모듈(enabled) 메타 ──────────────────────────────────── */
 export const MODULE_KEYS = [
     "authentication", "session", "roles", "orm", "ai", "embedding",
-    "event", "notice", "client", "openapi", "monitoring", "hexagonal",
+    "event", "notice", "client", "openapi", "hexagonal",
 ];
+
+/** 더 이상 쓰지 않는 enabled 키 — 불러올 때 지운다 (monitoring 은 루트 otel 로 옮겼다) */
+export const REMOVED_MODULE_KEYS = ["monitoring", "swagger", "vector"];
 
 /**
  * 직렬화용 enabled 키 순서.
@@ -24,8 +27,8 @@ export const MODULE_KEYS = [
  * 이 배열은 생성기가 내려주는 실제 프로필의 키 순서와 같게 맞춰 둔다.
  */
 export const ENABLED_KEY_ORDER = [
-    "hexagonal",  "roles", "orm", "ai", "embedding", "event", "notice",
-    "client", "openapi", "monitoring", "authentication", "session",
+    "hexagonal", "authentication", "session", "roles", "orm",
+    "ai", "embedding", "event", "notice", "client", "openapi",
 ];
 
 export const MODULE_META = {
@@ -39,7 +42,6 @@ export const MODULE_META = {
     client:         { label: "Client",         desc: "외부 API 호출" },
     openapi:        { label: "Open API",       desc: "API 외부 공유" },
     embedding:      { label: "Embedding",      desc: "공간화 연동" },
-    monitoring:     { label: "Monitoring",     desc: "Otel 연동" },
     hexagonal:      { label: "Hexagonal",      desc: "헥사고널 패턴 사용" },
 };
 
@@ -70,6 +72,38 @@ export const RESPONSIBILITY_SEGREGATION = ["BOTH", "COMMAND", "QUERY"];
 
 /** 커넥터가 필요해지는 messageBroker 값 (APP 은 인메모리라 불필요) */
 export const BROKERS_NEEDING_CONNECTOR = ["KAFKA", "REDIS", "NATS"];
+
+/** 멱등 발행 · 자동 ACK 를 쓰는 브로커 (그 외에는 키를 넣지 않는다) */
+export const BROKERS_WITH_DELIVERY_OPTIONS = ["KAFKA", "NATS"];
+
+/** externalConnectors 에 등록할 수 있는 이름 (중복 불가) */
+export const CONNECTOR_NAMES = ["frontend", "kafka", "redis", "nats"];
+
+export const CONNECTOR_META = {
+    frontend: { label: "Frontend", desc: "CORS 허용 및 게이트웨이 라우팅 대상", port: 3000 },
+    kafka:    { label: "Kafka",    desc: "Message Broker",                      port: 9092 },
+    redis:    { label: "Redis",    desc: "Message Broker",                      port: 6379 },
+    nats:     { label: "NATS",     desc: "Message Broker",                      port: 4222 },
+};
+
+/* ── OTel Collector (루트 otel) ──────────────────────────── */
+export const OTEL_SIGNALS = [
+    { key: "traces",  label: "Traces",  desc: "요청 추적" },
+    { key: "metrics", label: "Metrics", desc: "지표 수집" },
+];
+/** 프로토타입 생성기라 샘플링은 항상 전량(100%)이다 — 화면에서 고치지 않는다 */
+export const OTEL_SAMPLING = 100;
+
+export function createOtel() {
+    return {
+        enabled: false,
+        host: "localhost",
+        port: "4318",
+        sampling: OTEL_SAMPLING,
+        traces: true,
+        metrics: true,
+    };
+}
 
 /* ── Embedder : 임베딩 공급자 (루트, ai 와 같은 층) ──────── */
 export const EMBEDDER_TYPES = ["TRANSFORMERS", "OLLAMA", "OPENAI", "GOOGLE"];
@@ -198,7 +232,7 @@ export const ROLE_RULES = {
         sectionDesc: "배열 · 여러 개 추가 가능",
         isArray: true,
         modules: {
-            allowed: ["hexagonal", "orm", "ai", "event", "notice", "openapi", "client", "embedding", "monitoring", "roles"],
+            allowed: ["hexagonal", "orm", "ai", "event", "notice", "openapi", "client", "embedding", "roles"],
             forcedOn: [],
             /* ORM(일반 DB) 과 AI · Embedding 은 서비스를 나눈다. AI · Embedding 은 OpenAPI 필수. */
             exclusive: { orm: ["ai", "embedding"], ai: ["orm"], embedding: ["orm"] },
@@ -209,7 +243,7 @@ export const ROLE_RULES = {
             tag: "BLOCKING",
             tagTone: "g",
             note: "Backend 는 블로킹 스택이라 R2DBC 를 쓰지 않습니다.",
-            blockedNote: "R2DBC 는 Reactive 전용 — Gateway / Notification / Event 에서만 사용",
+            blockedNote: "R2DBC 는 Reactive 전용 — Gateway / Notification / Scheduler 에서만 사용",
         },
         hasResponsibilitySegregation: true,
         optionalSections: [],
@@ -222,7 +256,7 @@ export const ROLE_RULES = {
         sectionDesc: "단일 객체 · 최대 1개",
         isArray: false,
         modules: {
-            allowed: ["orm", "client", "monitoring", "session", "authentication"],
+            allowed: ["orm", "client", "session", "authentication"],
             forcedOn: ["hexagonal"],
         },
         orm: {
@@ -243,7 +277,7 @@ export const ROLE_RULES = {
         sectionDesc: "단일 객체 · 최대 1개",
         isArray: false,
         modules: {
-            allowed: ["client", "monitoring"],
+            allowed: ["client"],
             forcedOn: ["hexagonal", "notice"],
         },
         orm: {
@@ -256,15 +290,15 @@ export const ROLE_RULES = {
         hasResponsibilitySegregation: false,
         optionalSections: [],
     },
-    [ROLE.EVENT]: {
-        label: "Event",
-        roleBadge: "EVENT",
+    [ROLE.SCHEDULER]: {
+        label: "Scheduler",
+        roleBadge: "SCHEDULER",
         tone: "v",
-        path: "event",
+        path: "scheduler",
         sectionDesc: "단일 객체 · 최대 1개",
         isArray: false,
         modules: {
-            allowed: ["client", "monitoring"],
+            allowed: ["client"],
             forcedOn: ["hexagonal", "event"],
         },
         orm: {
@@ -272,7 +306,7 @@ export const ROLE_RULES = {
             tag: "REACTIVE",
             tagTone: "v",
             note: "Reactive 스택이라 R2DBC 만 사용합니다.",
-            blockedNote: "Event 는 Reactive 스택 — 블로킹 ORM 사용 불가",
+            blockedNote: "Scheduler 는 Reactive 스택 — 블로킹 ORM 사용 불가",
         },
         hasResponsibilitySegregation: false,
         optionalSections: [],
@@ -345,10 +379,6 @@ export function createOrm(role) {
 /** 샘플 JSON 의 interServer 에는 responsibilitySegregation 이 없다 — 넣지 않는다. */
 export function createInterServer() {
     return { name: "new-server", url: "http://localhost:8080", artifact: "", domains: [] };
-}
-
-export function createExternalConnector() {
-    return { name: "new-connector", domain: "localhost", port: 8080 };
 }
 
 /**
@@ -430,6 +460,11 @@ export function normalizeService(service, role) {
         changed = true;
     }
 
+    // 0-b) 더 이상 쓰지 않는 키 제거 (monitoring 은 루트 otel 로 옮겼다)
+    REMOVED_MODULE_KEYS.forEach((key) => {
+        if (key in enabled) { delete enabled[key]; changed = true; }
+    });
+
     // 1) enabled 플래그를 규칙에 맞춘다
     MODULE_KEYS.forEach((key) => {
         const state = moduleState(role, key);
@@ -508,8 +543,8 @@ function isObject(v) {
  */
 const PROFILE_KEY_ORDER = [
     "editedAt", "description", "group", "version", "basePath",
-    "messageBroker", "authenticator", "ai", "embedder",
-    "externalConnectors", "projects", "gateway", "notification", "event",
+    "messageBroker", "otel", "authenticator", "ai", "embedder",
+    "externalConnectors", "projects", "gateway", "notification", "scheduler",
 ];
 const SERVICE_KEY_ORDER = [
     "name", "desc", "localPort", "enabled",
@@ -526,6 +561,9 @@ const VECTORSOURCE_KEY_ORDER = [
     "initializeSchema",
 ];
 const INTERSERVER_KEY_ORDER = ["name", "url", "artifact", "domains"];
+const MESSAGE_BROKER_KEY_ORDER = ["type", "idempotent", "manualAck"];
+const OTEL_KEY_ORDER = ["enabled", "host", "port", "sampling", "traces", "metrics"];
+const CONNECTOR_KEY_ORDER = ["name", "domain", "port"];
 
 function reorder(object, order) {
     if (!isObject(object)) return object;
@@ -558,6 +596,12 @@ export function normalizeProfile(profile) {
     let changed = false;
     const next = { ...profile };
 
+    /* 서비스 정규화가 enabled.monitoring 을 지우기 전에 값을 먼저 읽어 둔다 (otel 이관용) */
+    const legacyMonitoring = [
+        ...(Array.isArray(profile.projects) ? profile.projects : []),
+        profile.gateway, profile.notification, profile.scheduler,
+    ].some((s) => s?.enabled?.monitoring === true);
+
     /* 1) 모든 서비스를 역할 규칙에 맞춘다.
           ServiceCard 안에서 하지 않는 이유: 그 컴포넌트는 Services 탭을 열어야
           마운트되므로, 탭을 안 열고 Push 하면 정규화가 통째로 건너뛰어진다. */
@@ -565,7 +609,7 @@ export function normalizeProfile(profile) {
         const projects = next.projects.map((s) => normalizeService(s, ROLE.BACKEND) || s);
         if (projects.some((s, i) => s !== next.projects[i])) { next.projects = projects; changed = true; }
     }
-    [[ROLE.GATEWAY, "gateway"], [ROLE.NOTIFICATION, "notification"], [ROLE.EVENT, "event"]].forEach(([role, key]) => {
+    [[ROLE.GATEWAY, "gateway"], [ROLE.NOTIFICATION, "notification"], [ROLE.SCHEDULER, "scheduler"]].forEach(([role, key]) => {
         if (!isObject(next[key])) return;
         const fixed = normalizeService(next[key], role);
         if (fixed) { next[key] = fixed; changed = true; }
@@ -576,7 +620,7 @@ export function normalizeProfile(profile) {
         ...(Array.isArray(next.projects) ? next.projects : []),
         next.gateway,
         next.notification,
-        next.event,
+        next.scheduler,
     ].filter(isObject);
 
     if (services.some((s) => s?.enabled?.embedding === true) && !isObject(next.embedder)) {
@@ -616,6 +660,55 @@ export function normalizeProfile(profile) {
         }
     }
 
+    /* 5) messageBroker 를 객체로 맞추고, 브로커에 맞는 전달 옵션 키만 남긴다 */
+    {
+        const raw = next.messageBroker;
+        const broker = isObject(raw) ? { ...raw } : { type: typeof raw === "string" ? raw : "APP" };
+        if (!MESSAGE_BROKERS.includes(broker.type)) broker.type = "APP";
+
+        if (BROKERS_WITH_DELIVERY_OPTIONS.includes(broker.type)) {
+            if (typeof broker.idempotent !== "boolean") broker.idempotent = false;
+            if (typeof broker.manualAck !== "boolean") broker.manualAck = false;
+        } else {
+            delete broker.idempotent;
+            delete broker.manualAck;
+        }
+        if (JSON.stringify(broker) !== JSON.stringify(raw)) { next.messageBroker = broker; changed = true; }
+    }
+
+    /* 6) OTel Collector 를 루트 otel 로 모은다.
+          - 예전 externalConnectors 의 otel 항목에서 host · port 를 가져오고 그 항목은 지운다
+          - 예전 서비스별 enabled.monitoring 은 otel.enabled 로 옮긴다 (키 자체는 normalizeService 가 지운다) */
+    {
+        const connectors = Array.isArray(next.externalConnectors) ? next.externalConnectors : [];
+        const otelIndex = connectors.findIndex((c) => {
+            const key = String(c?.name || "").toLowerCase();
+            return key.includes("otel") || key.includes("telemetry") || key.includes("collector");
+        });
+        const legacy = otelIndex >= 0 ? connectors[otelIndex] : null;
+
+        if (!isObject(next.otel)) {
+            const otel = createOtel();
+            if (legacy) {
+                if (legacy.host || legacy.domain) otel.host = legacy.host || legacy.domain;
+                if (legacy.port) otel.port = legacy.port;
+            }
+            if (legacyMonitoring || legacy) otel.enabled = legacyMonitoring;
+            next.otel = otel;
+            changed = true;
+        } else {
+            const otel = { ...createOtel(), ...next.otel };
+            delete otel.protocol;                 // 포트로 정하므로 더 이상 쓰지 않는다
+            otel.sampling = OTEL_SAMPLING;        // 항상 전량 수집
+            if (JSON.stringify(otel) !== JSON.stringify(next.otel)) { next.otel = otel; changed = true; }
+        }
+
+        if (otelIndex >= 0) {
+            next.externalConnectors = connectors.filter((_, i) => i !== otelIndex);
+            changed = true;
+        }
+    }
+
     return changed ? next : null;
 }
 
@@ -626,7 +719,12 @@ export function orderProfileKeys(profile) {
     if (Array.isArray(next.projects)) next.projects = next.projects.map(orderServiceKeys);
     if (isObject(next.gateway)) next.gateway = orderServiceKeys(next.gateway);
     if (isObject(next.notification)) next.notification = orderServiceKeys(next.notification);
-    if (isObject(next.event)) next.event = orderServiceKeys(next.event);
+    if (isObject(next.scheduler)) next.scheduler = orderServiceKeys(next.scheduler);
+    if (isObject(next.messageBroker)) next.messageBroker = reorder(next.messageBroker, MESSAGE_BROKER_KEY_ORDER);
+    if (isObject(next.otel)) next.otel = reorder(next.otel, OTEL_KEY_ORDER);
+    if (Array.isArray(next.externalConnectors)) {
+        next.externalConnectors = next.externalConnectors.map((c) => reorder(c, CONNECTOR_KEY_ORDER));
+    }
     return reorder(next, PROFILE_KEY_ORDER);
 }
 
@@ -654,20 +752,6 @@ export function connectorPurpose(name, profile) {
         };
     }
 
-    /* Monitoring — OTel 컬렉터. 서비스 중 하나라도 monitoring 을 켜면 사용된다.
-       messageBroker 와는 무관하다. */
-    if (key.includes("otel") || key.includes("telemetry") || key.includes("collector")) {
-        const active = anyMonitoringEnabled(profile);
-        return {
-            label: "Monitoring",
-            tone: "v",
-            active,
-            title: active
-                ? "monitoring 을 켠 서비스가 있어 이 커넥터를 사용합니다"
-                : "monitoring 을 켠 서비스가 없어 지금은 사용하지 않습니다 (오류 아님)",
-        };
-    }
-
     /* Frontend — 별도 토글이 없다. 등록해 두면 쓰는 것으로 본다. */
     if (key.includes("front") || key.includes("web") || key.includes("ui")) {
         return {
@@ -681,15 +765,18 @@ export function connectorPurpose(name, profile) {
     return { label: "기타", tone: "", active: false, title: "용도를 자동으로 판정하지 못했습니다" };
 }
 
-export function anyMonitoringEnabled(profile) {
-    if (!profile) return false;
-    const services = [
-        ...(Array.isArray(profile.projects) ? profile.projects : []),
-        profile.gateway,
-        profile.notification,
-        profile.event,
-    ];
-    return services.some((s) => s?.enabled?.monitoring === true);
+/** 아직 등록하지 않은 커넥터 이름 */
+export function availableConnectorNames(profile, current) {
+    const used = (Array.isArray(profile?.externalConnectors) ? profile.externalConnectors : [])
+        .map((c) => String(c?.name || "").toLowerCase());
+    return CONNECTOR_NAMES.filter((n) => n === current || !used.includes(n));
+}
+
+/** 새 커넥터 — 아직 쓰지 않은 이름 중 첫 번째로 만든다 */
+export function createExternalConnectorFor(profile) {
+    const name = availableConnectorNames(profile)[0];
+    if (!name) return null;
+    return { name, domain: "localhost", port: CONNECTOR_META[name].port };
 }
 
 /* ── 비밀값 취급 ─────────────────────────────────────────── */

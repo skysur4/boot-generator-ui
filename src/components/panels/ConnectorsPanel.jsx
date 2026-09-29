@@ -1,5 +1,8 @@
 import React from "react";
-import { connectorPurpose, createExternalConnector } from "../../config/rules";
+import {
+    connectorPurpose, CONNECTOR_META, CONNECTOR_NAMES,
+    availableConnectorNames, createExternalConnectorFor,
+} from "../../config/rules";
 import { Card, CardHead, CardBody, Note, AddButton, EmptyBox } from "../ui/primitives";
 import { ListRow } from "../ui/fields";
 import { IconPlug, IconInfo, IconPulse, IconMonitor } from "../ui/icons";
@@ -18,7 +21,23 @@ export default function ConnectorsPanel({ profile, onChange }) {
 
     const setAt = (index, key, value) => onChange(["externalConnectors", index, key], value);
     const remove = (index) => onChange(["externalConnectors"], connectors.filter((_, j) => j !== index));
-    const add = () => onChange(["externalConnectors"], [...connectors, createExternalConnector()]);
+    const add = () => {
+        const created = createExternalConnectorFor(profile);
+        if (created) onChange(["externalConnectors"], [...connectors, created]);
+    };
+
+    /* 이름을 바꿀 때 기본 포트도 같이 옮긴다 (이전 이름의 기본 포트를 쓰고 있었을 때만) */
+    const rename = (index, name) => {
+        const current = connectors[index];
+        const previous = CONNECTOR_META[String(current?.name || "").toLowerCase()];
+        setAt(index, "name", name);
+        if (previous && Number(current?.port) === previous.port) {
+            const port = CONNECTOR_META[name].port;
+            setAt(index, "port", typeof current.port === "string" ? String(port) : port);
+        }
+    };
+
+    const remaining = availableConnectorNames(profile);
 
     return (
         <div className="panel">
@@ -37,15 +56,14 @@ export default function ConnectorsPanel({ profile, onChange }) {
                         }}
                     >
                         <RuleRow badge={<span className="why why-b"><IconPulse size={11} />Message Broker</span>}>
-                            Message Broker 가 <span className="mono">KAFKA · REDIS · NATS</span> 중 하나일 때 — 해당 브로커의 주소·포트
-                        </RuleRow>
-                        <RuleRow badge={<span className="why why-v"><IconPulse size={11} />Monitoring</span>}>
-                            서비스 중 하나라도 <span className="mono">monitoring</span> 을 켰을 때 — OTel 컬렉터
-                            (트레이스·메트릭·로그 수집). Message Broker 와는 무관합니다
+                            Overview 의 Message Broker 가 <span className="mono">KAFKA · REDIS · NATS</span> 중 하나일 때 — 해당 브로커의 주소·포트
                         </RuleRow>
                         <RuleRow badge={<span className="why why-g"><IconMonitor size={11} />Frontend</span>}>
                             프론트엔드를 함께 띄울 때 — CORS 허용 및 게이트웨이 라우팅 대상
                         </RuleRow>
+                    </div>
+                    <div style={{ marginTop: 8 }}>
+                        OTel 컬렉터는 커넥터가 아니라 <b>Overview 의 Infrastructure</b> 카드에서 설정합니다.
                     </div>
                 </Note>
             </div>
@@ -57,14 +75,24 @@ export default function ConnectorsPanel({ profile, onChange }) {
 
                     {connectors.map((connector, i) => {
                         const purpose = connectorPurpose(connector.name, profile);
+                        const name = String(connector.name || "").toLowerCase();
+                        const options = availableConnectorNames(profile, name);
                         return (
                             <ListRow key={i} onRemove={() => remove(i)} removeLabel="커넥터 삭제">
-                                <input
-                                    className="input"
-                                    style={{ flex: 1.2 }}
-                                    value={connector.name ?? ""}
-                                    onChange={(e) => setAt(i, "name", e.target.value)}
-                                />
+                                <div className="selectwrap" style={{ flex: 1.2 }}>
+                                    <select
+                                        className="input select"
+                                        value={CONNECTOR_NAMES.includes(name) ? name : ""}
+                                        onChange={(e) => rename(i, e.target.value)}
+                                    >
+                                        {!CONNECTOR_NAMES.includes(name) && (
+                                            <option value="" disabled>{connector.name || "(이름 없음)"}</option>
+                                        )}
+                                        {options.map((option) => (
+                                            <option key={option} value={option}>{option}</option>
+                                        ))}
+                                    </select>
+                                </div>
                                 <input
                                     className="input"
                                     style={{ flex: 2 }}
@@ -93,7 +121,13 @@ export default function ConnectorsPanel({ profile, onChange }) {
                         );
                     })}
 
-                    <AddButton onClick={add}>Connector 추가</AddButton>
+                    {remaining.length > 0 ? (
+                        <AddButton onClick={add}>Connector 추가</AddButton>
+                    ) : (
+                        <div className="f-hint" style={{ marginTop: 8 }}>
+                            등록할 수 있는 커넥터({CONNECTOR_NAMES.join(" · ")})를 모두 등록했습니다.
+                        </div>
+                    )}
                 </CardBody>
             </Card>
         </div>

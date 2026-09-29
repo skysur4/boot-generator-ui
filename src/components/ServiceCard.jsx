@@ -18,7 +18,7 @@ const ROLE_ICON = {
     [ROLE.BACKEND]: IconBox,
     [ROLE.GATEWAY]: IconGateway,
     [ROLE.NOTIFICATION]: IconBell,
-    [ROLE.EVENT]: IconEvent,
+    [ROLE.SCHEDULER]: IconEvent,
 };
 
 /* ── 접힌 상태 요약 배지 ─────────────────────────────────── */

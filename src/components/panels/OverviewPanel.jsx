@@ -1,16 +1,18 @@
 import React from "react";
 import {
-    AUTHENTICATOR_TYPES, AI_TYPES, AI_DEFAULT_MODELS, AI_DEFAULT_URLS, MESSAGE_BROKERS,
+    AUTHENTICATOR_TYPES, AI_TYPES, AI_DEFAULT_MODELS, AI_DEFAULT_URLS,
+    MESSAGE_BROKERS, BROKERS_WITH_DELIVERY_OPTIONS,
+    OTEL_SIGNALS,
     EMBEDDER_TYPES, EMBEDDER_META, EMBEDDING_MODELS, findEmbeddingModel, defaultEmbeddingModel,
     embedderUsesUrl, stripUrlPrefix, withUrlPrefix,
     SIMILARITY_MIN, SIMILARITY_MAX,
 } from "../../config/rules";
-import { Card, CardHead, CardBody } from "../ui/primitives";
+import { Card, CardHead, CardBody, SubGroup } from "../ui/primitives";
 import {
-    Field, TextField, SecretField, SegmentedField, Toggle,
+    Field, TextField, NumberField, SecretField, SegmentedField, Toggle,
     TextAreaField, RangeField,
 } from "../ui/fields";
-import { IconFile, IconLock, IconSparkles, IconPulse, IconVector } from "../ui/icons";
+import { IconFile, IconLock, IconSparkles, IconPulse, IconVector, IconMonitor } from "../ui/icons";
 
 export default function OverviewPanel({ profile, onChange }) {
     const version = profile.version || {};
@@ -24,6 +26,11 @@ export default function OverviewPanel({ profile, onChange }) {
     const usesUrl = embedderUsesUrl(embedder);
     const urlPrefix = embedderMeta.urlPrefix || "";
 
+    const broker = profile.messageBroker || {};
+    const brokerHasOptions = BROKERS_WITH_DELIVERY_OPTIONS.includes(broker.type);
+    const otel = profile.otel || {};
+    const otelOn = otel.enabled === true;
+
     const isKeycloak = authenticator.type === "KEYCLOAK";
     const isOllamaAi = ai.type === "OLLAMA";
     const versionText = [version.major, version.minor, version.patch]
@@ -35,7 +42,7 @@ export default function OverviewPanel({ profile, onChange }) {
 
                 {/* 프로필 메타 */}
                 <Card>
-                    <CardHead icon={<IconFile size={13} />} title="프로필 메타" hint="root" />
+                    <CardHead icon={<IconFile size={13} />} title="Profile Meta" hint="root" />
                     <CardBody>
                         <TextField label="Description" ui value={profile.description} onChange={(v) => onChange(["description"], v)} />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-[10px]">
@@ -67,7 +74,7 @@ export default function OverviewPanel({ profile, onChange }) {
                             <div style={{ marginTop: 8 }}>
                                 <Toggle
                                     name="Versionable"
-                                    desc="아티팩트에 버전 부여"
+                                    desc="패키지 및 클래스 버전 사용"
                                     checked={version.versionable}
                                     onChange={(v) => onChange(["version", "versionable"], v)}
                                 />
@@ -80,7 +87,7 @@ export default function OverviewPanel({ profile, onChange }) {
 
                 {/* Authenticator */}
                 <Card>
-                    <CardHead icon={<IconLock size={13} />} title="Authenticator" hint="authenticator" />
+                    <CardHead icon={<IconLock size={13} />} title="ID Provider" hint="authenticator" />
                     <CardBody>
                         <SegmentedField
                             label="Type"
@@ -104,21 +111,6 @@ export default function OverviewPanel({ profile, onChange }) {
                         <TextField label="Server URL" value={authenticator.serverUrl} onChange={(v) => onChange(["authenticator", "serverUrl"], v)} />
                         <TextField label="Client Id" value={authenticator.clientId} onChange={(v) => onChange(["authenticator", "clientId"], v)} />
                         <SecretField label="Client Secret" value={authenticator.clientSecret} onChange={(v) => onChange(["authenticator", "clientSecret"], v)} />
-                    </CardBody>
-                </Card>
-
-                {/* Messaging */}
-                <Card>
-                    <CardHead icon={<IconPulse size={13} />} title="Event Delivery" hint="messageBroker" />
-                    <CardBody>
-                        <SegmentedField
-                            label="Message Broker"
-                            name="message-broker"
-                            value={profile.messageBroker.type}
-                            options={MESSAGE_BROKERS}
-                            onChange={(v) => onChange(["messageBroker"], v)}
-                            hint="이벤트 및 알림 발행자는 이 값을 그대로 따릅니다."
-                        />
                     </CardBody>
                 </Card>
 
@@ -167,7 +159,7 @@ export default function OverviewPanel({ profile, onChange }) {
 
                 {/* Embedder */}
                 <Card>
-                    <CardHead icon={<IconVector size={13} />} title="Embedding Provider" hint="embedder" />
+                    <CardHead icon={<IconVector size={13} />} title="Embedding Provider" hint="ai embedding" />
                     <CardBody>
                         <SegmentedField
                             label="Type"
@@ -291,6 +283,94 @@ export default function OverviewPanel({ profile, onChange }) {
                             채팅 모델(AI Provider)과 임베딩 공급자는 서로 묶이지 않습니다.
                             서비스의 <b>Embedding</b> 토글이 하나라도 켜져 있을 때 사용됩니다.
                         </div>
+                    </CardBody>
+                </Card>
+
+                {/* Infrastructure : Message Broker + OTel Collector */}
+                <Card>
+                    <CardHead icon={<IconPulse size={13} />} title="Infra Provider" hint="mq · otel" />
+                    <CardBody>
+                        <SubGroup icon={<IconPulse size={13} />}>Message Broker</SubGroup>
+                        <SegmentedField
+                            label="Type"
+                            name="message-broker"
+                            value={broker.type}
+                            options={MESSAGE_BROKERS}
+                            onChange={(v) => onChange(["messageBroker", "type"], v)}
+                            hint="이벤트 및 알림 발행자는 이 값을 그대로 따릅니다."
+                        />
+                        <Field
+                            label="Delivery"
+                            hint={
+                                brokerHasOptions
+                                    ? "KAFKA · NATS 에서만 쓰는 옵션입니다. 끄면 JSON 에서도 빠집니다."
+                                    : `${broker.type || "현재 브로커"} 는 이 옵션을 쓰지 않습니다.`
+                            }
+                        >
+                            <div className="togglegrid">
+                                <Toggle
+                                    name="Idempotence"
+                                    desc="중복 발행 방지"
+                                    checked={broker.idempotent}
+                                    locked={!brokerHasOptions}
+                                    lockTitle="KAFKA · NATS 에서만 사용합니다"
+                                    onChange={(v) => onChange(["messageBroker", "idempotent"], v)}
+                                />
+                                <Toggle
+                                    name="Manual Ack"
+                                    desc="수신 확인 수동 응답"
+                                    checked={broker.manualAck}
+                                    locked={!brokerHasOptions}
+                                    lockTitle="KAFKA · NATS 에서만 사용합니다"
+                                    onChange={(v) => onChange(["messageBroker", "manualAck"], v)}
+                                />
+                            </div>
+                        </Field>
+
+                        <div className="card-divider" />
+
+                        <SubGroup icon={<IconMonitor size={13} />}>OTel Collector</SubGroup>
+                        <Field
+                            label="Enabled"
+                        >
+                            <Toggle
+                                name="OTel Collector"
+                                desc="트레이스 · 지표 · 로그 수집"
+                                checked={otelOn}
+                                onChange={(v) => onChange(["otel", "enabled"], v)}
+                            />
+                        </Field>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-[10px]">
+                            <TextField
+                                label="Host"
+                                disabled={!otelOn}
+                                value={otel.host}
+                                onChange={(v) => onChange(["otel", "host"], v)}
+                            />
+                            <NumberField
+                                label="Port"
+                                disabled={!otelOn}
+                                value={otel.port}
+                                onChange={(v) => onChange(["otel", "port"], v)}
+                            />
+                        </div>
+
+                        <Field label="Signals" hint="보낼 신호를 고릅니다. (Logs는 항상 수집)">
+                            <div className="togglegrid">
+                                {OTEL_SIGNALS.map(({ key, label, desc }) => (
+                                    <Toggle
+                                        key={key}
+                                        name={label}
+                                        desc={desc}
+                                        checked={otel[key]}
+                                        locked={!otelOn}
+                                        lockTitle="OTel Collector 를 켜야 설정할 수 있습니다"
+                                        onChange={(v) => onChange(["otel", key], v)}
+                                    />
+                                ))}
+                            </div>
+                        </Field>
                     </CardBody>
                 </Card>
 
