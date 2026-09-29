@@ -103,8 +103,12 @@ export default function OverviewPanel({ profile, onChange }) {
                         <Field label="Docker Compose">
                             <Toggle
                                 name="Docker Compose"
-                                desc="인프라 compose 파일 생성"
-                                checked={profile.dockerCompose}
+                                //desc="인프라 compose 파일 생성"
+                                //checked={profile.dockerCompose}
+                                desc="미지원"
+                                checked={false}
+                                locked={true}
+                                // 사용 시 위 3줄 삭제 및 desc checked 주석 해제
                                 onChange={(v) => onChange(["dockerCompose"], v)}
                             />
                         </Field>
@@ -124,7 +128,7 @@ export default function OverviewPanel({ profile, onChange }) {
             <div className="grid-cards">
 
                 {/* Authenticator */}
-                <FoldCard icon={<IconLock size={13} />} title="ID Provider" hint="authenticator">
+                <FoldCard icon={<IconLock size={13} />} title="ID Provider" hint="authenticator" defaultOpen={false}>
                         <SegmentedField
                             label="Type"
                             name="auth-type"
@@ -150,7 +154,7 @@ export default function OverviewPanel({ profile, onChange }) {
                 </FoldCard>
 
                 {/* AI */}
-                <FoldCard icon={<IconSparkles size={13} />} title="AI Provider" hint="ai">
+                <FoldCard icon={<IconSparkles size={13} />} title="AI Provider" hint="ai" defaultOpen={false}>
                         <SegmentedField
                             label="Type"
                             name="ai-type"
@@ -190,7 +194,7 @@ export default function OverviewPanel({ profile, onChange }) {
                 </FoldCard>
 
                 {/* Embedder */}
-                <FoldCard icon={<IconVector size={13} />} title="Embedding Provider" hint="ai embedding">
+                <FoldCard icon={<IconVector size={13} />} title="Embedding Provider" hint="ai embedding" defaultOpen={false}>
                         <SegmentedField
                             label="Type"
                             name="embedder-type"
@@ -316,7 +320,7 @@ export default function OverviewPanel({ profile, onChange }) {
                 </FoldCard>
 
                 {/* Infrastructure : Message Broker + OTel Collector */}
-                <FoldCard icon={<IconPulse size={13} />} title="Infra Provider" hint="mq · otel">
+                <FoldCard icon={<IconPulse size={13} />} title="Infra Provider" hint="mq · otel" defaultOpen={false}>
                         <SubGroup icon={<IconPulse size={13} />}>Message Broker</SubGroup>
                         <SegmentedField
                             label="Type"
