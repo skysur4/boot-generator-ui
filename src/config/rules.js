@@ -253,7 +253,7 @@ export const ROLE_RULES = {
         roleBadge: "GATEWAY",
         tone: "b",
         path: "gateway",
-        sectionDesc: "단일 객체 · 최대 1개",
+        sectionDesc: "인증 관리 및 컨텍스트별 백엔드 라우팅 · 최대 1개",
         isArray: false,
         modules: {
             allowed: ["orm", "client", "session", "authentication"],
@@ -274,10 +274,10 @@ export const ROLE_RULES = {
         roleBadge: "NOTIFIER",
         tone: "v",
         path: "notification",
-        sectionDesc: "단일 객체 · 최대 1개",
+        sectionDesc: "MQ를 이용한 프론트엔드 알림 관리 · 최대 1개",
         isArray: false,
         modules: {
-            allowed: ["client"],
+            allowed: [],
             forcedOn: ["hexagonal", "notice"],
         },
         orm: {
@@ -295,10 +295,10 @@ export const ROLE_RULES = {
         roleBadge: "SCHEDULER",
         tone: "v",
         path: "scheduler",
-        sectionDesc: "단일 객체 · 최대 1개",
+        sectionDesc: "MQ를 이용한 스케줄러 관리 · 최대 1개",
         isArray: false,
         modules: {
-            allowed: ["client"],
+            allowed: [],
             forcedOn: ["hexagonal", "event"],
         },
         orm: {
@@ -542,7 +542,7 @@ function isObject(v) {
  * 같은 모양의 JSON 을 받게 한다. 목록에 없는 키는 원래 순서대로 뒤에 붙는다.
  */
 const PROFILE_KEY_ORDER = [
-    "editedAt", "description", "group", "version", "basePath", "watermark", "purge", "interServerKey",
+    "editedAt", "description", "group", "version", "basePath", "watermark", "purge", "oauthInterServer",
     "messageBroker", "otel", "authenticator", "ai", "embedder",
     "externalConnectors", "projects", "gateway", "notification", "scheduler",
 ];

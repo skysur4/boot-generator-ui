@@ -102,10 +102,10 @@ export default function OverviewPanel({ profile, onChange }) {
 
                         <Field label="Serverly Authentication">
                             <Toggle
-                                name="Inter Server Key"
-                                desc="내부 서버 간 통신키 확인"
-                                checked={profile.interServerKey}
-                                onChange={(v) => onChange(["interServerKey"], v)}
+                                name="Oauth Inter Server"
+                                desc="내부 서버 간 Oauth 확인"
+                                checked={profile.oauthInterServer}
+                                onChange={(v) => onChange(["oauthInterServer"], v)}
                             />
                         </Field>
                     </div>
