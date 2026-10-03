@@ -71,7 +71,7 @@ export default function OverviewPanel({ profile, onChange }) {
                             </div>
                         </Field>
 
-                        <TextField label="Base Path" value={profile.basePath} onChange={(v) => onChange(["basePath"], v)} />
+                        <TextField label="Base Path" tag={"프로젝트 위치"} tagTone="b" value={profile.basePath} onChange={(v) => onChange(["basePath"], v)} />
 
                         <Field label="Versionable">
                             <Toggle

@@ -65,6 +65,15 @@ export const IconSparkles = (p) => (
         <path d="M19 3v4M21 5h-4"/>
     </Svg>
 );
+export const IconDownload = (p) => (
+    <Svg {...p}>
+        <path d="M12 2v8"/>
+        <path d="m16 6-4 4-4-4"/>
+        <rect width="20" height="8" x="2" y="14" rx="2"/>
+        <path d="M6 18h.01"/>
+        <path d="M10 18h.01"/>
+    </Svg>
+);
 export const IconMoon = (p) => (
     <Svg {...p}>
         <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>

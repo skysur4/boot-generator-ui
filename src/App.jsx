@@ -7,11 +7,11 @@ import JsonPreviewPopup from "./components/JsonPreviewPopup";
 import ToastAlert from "./components/ToastAlert";
 import { ConfirmProvider, useConfirm } from "./components/ConfirmDialog";
 import { useSystemTheme } from "./hooks/useSystemTheme";
-import { fetchProfiles, saveProfile, deleteProfile, generateProfile } from "./api";
+import { fetchProfiles, saveProfile, deleteProfile, generateProfile, downloadProfile } from "./api";
 import { orderProfileKeys } from "./config/rules";
 import {
     IconLeaf, IconTrash, IconCommit, IconUpload, IconCode,
-    IconSparkles, IconMoon, IconSun,
+    IconSparkles, IconMoon, IconSun, IconDownload
 } from "./components/ui/icons";
 
 const DEFAULT_PROFILE_NAME = "template";
@@ -34,6 +34,8 @@ function AppShell() {
 
     const [previewOpen, setPreviewOpen] = useState(false);
     const [toast, setToast] = useState({ open: false, message: "", tone: "ok" });
+
+    const [isWorking, setIsWorking] = useState(false);
 
     const isTemplate = selected === DEFAULT_PROFILE_NAME;
 
@@ -164,11 +166,30 @@ function AppShell() {
     const handleGenerate = async (profileName) => {
         try {
             if (isDirty) return showToast("변경 사항이 있습니다. Push 가 필요합니다", "error");
+            setIsWorking(true);
+
             await generateProfile(profileName);
             showToast("Generate completed");
         } catch (error) {
             console.error("Failed to generate", error);
             showToast("Generate failed", "error");
+        } finally {
+            setIsWorking(false);
+        }
+    };
+
+    const handleZip = async (profileName) => {
+        try {
+            if (isDirty) return showToast("변경 사항이 있습니다. Push 가 필요합니다", "error");
+            setIsWorking(true);
+
+            await downloadProfile(profileName);
+            showToast("Download completed");
+        } catch (error) {
+            console.error("Failed to download", error);
+            showToast("Download failed", "error");
+        } finally {
+            setIsWorking(false);
         }
     };
 
@@ -273,8 +294,11 @@ function AppShell() {
                         </button>
                     </div>
 
-                    <button type="button" className="btn btn-primary" onClick={() => handleGenerate(selected)} disabled={disabled}>
+                    <button type="button" className="btn btn-primary" onClick={() => handleGenerate(selected)} disabled={disabled || isWorking}>
                         <IconSparkles size={15} />Generate
+                    </button>
+                    <button type="button" className="btn btn-primary" onClick={() => handleZip(selected)} disabled={disabled || isWorking}>
+                        <IconDownload size={15} />Zip
                     </button>
                 </div>
             </header>
