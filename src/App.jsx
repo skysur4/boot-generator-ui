@@ -246,7 +246,7 @@ function AppShell() {
                 <div className="flex items-center gap-[10px] flex-shrink-0">
                     <span className="brand-mark"><IconLeaf size={17} /></span>
                     <span>
-                        <span className="brand-name" style={{ display: "block" }}>Boot Generator</span>
+                        <span className="brand-name" style={{ display: "block" }}>Prototype Architect</span>
                         <span className="brand-sub" style={{ display: "block" }}>Spring Boot 4.1.1</span>
                     </span>
                 </div>
