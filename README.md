@@ -27,6 +27,7 @@
 - 값이 변하거나 추가될 경우 설계 자체가 근본적으로 흔들릴 수 있음
 
 ## 4. 샘플 ERD (쇼핑몰)
+[schema SQL](src/schema/TableGenerator_Korean.sql)
 ```mermaid
 erDiagram
     member ||--o{ shopping_cart : "소유 (member_id)"

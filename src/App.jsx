@@ -7,7 +7,7 @@ import JsonPreviewPopup from "./components/JsonPreviewPopup";
 import ToastAlert from "./components/ToastAlert";
 import { ConfirmProvider, useConfirm } from "./components/ConfirmDialog";
 import { useSystemTheme } from "./hooks/useSystemTheme";
-import { fetchProfiles, saveProfile, deleteProfile, generateProfile, downloadProfile } from "./api";
+import {fetchProfiles, saveProfile, deleteProfile, generateProfile, downloadProfile, downloadDefinition} from "./api";
 import { orderProfileKeys } from "./config/rules";
 import {
     IconLeaf, IconTrash, IconCommit, IconUpload, IconCode,
@@ -193,6 +193,21 @@ function AppShell() {
         }
     };
 
+    const handleDefinition = async (profileName) => {
+        try {
+            if (isDirty) return showToast("변경 사항이 있습니다. Push 가 필요합니다", "error");
+            setIsWorking(true);
+
+            await downloadDefinition(profileName);
+            showToast("Download completed");
+        } catch (error) {
+            console.error("Failed to download", error);
+            showToast("Download failed", "error");
+        } finally {
+            setIsWorking(false);
+        }
+    };
+
     /* ── 편집 ──────────────────────────────────────────── */
     const handleTitleChange = (value) => {
         setProfiles((prev) => {
@@ -299,6 +314,9 @@ function AppShell() {
                     </button>
                     <button type="button" className="btn btn-primary" onClick={() => handleZip(selected)} disabled={disabled || isWorking}>
                         <IconDownload size={15} />Zip
+                    </button>
+                    <button type="button" className="btn btn-primary" onClick={() => handleDefinition(selected)} disabled={disabled || isWorking}>
+                        <IconDownload size={15} />DB
                     </button>
                 </div>
             </header>

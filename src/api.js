@@ -58,3 +58,42 @@ export async function downloadProfile(profileName) {
 
     URL.revokeObjectURL(url);
 }
+
+export async function downloadDefinition(profileName) {
+    const res = await fetch(baseUrl + `table/definition/${encodeURIComponent(profileName)}/${encodeURIComponent("작성자")}/${encodeURIComponent("상태")}`);
+
+    if (!res.ok) {
+        throw new Error(`Download failed: ${res.status}`);
+    }
+
+    const blob = await res.blob();
+
+    // Get filename
+    let fileName = `table-definition-${encodeURIComponent(profileName)}.zip`;
+
+    const contentDisposition = res.headers.get("Content-Disposition");
+
+    if (contentDisposition) {
+        const match = contentDisposition.match(
+            /filename\*=UTF-8''([^;]+)|filename="?([^"]+)"?/i
+        );
+
+        if (match) {
+            fileName = decodeURIComponent(match[1] || match[2]);
+        }
+    }
+
+    // Trigger browser download
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+}
+
+
