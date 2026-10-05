@@ -73,41 +73,31 @@ export default function OverviewPanel({ profile, onChange }) {
 
                         <TextField label="Base Path" tag={"프로젝트 위치"} tagTone="b" value={profile.basePath} onChange={(v) => onChange(["basePath"], v)} />
 
-                        <Field label="Versionable">
-                            <Toggle
-                                name="Versionable"
-                                desc="패키지 및 클래스 버전 사용"
-                                checked={version.versionable}
-                                onChange={(v) => onChange(["version", "versionable"], v)}
-                            />
-                        </Field>
+                        <Toggle
+                            name="Versionable"
+                            desc="패키지 및 클래스 버전 사용"
+                            checked={version.versionable}
+                            onChange={(v) => onChange(["version", "versionable"], v)}
+                        />
+                        <Toggle
+                            name="Watermark"
+                            desc="생성 시각 주석 삽입"
+                            checked={profile.watermark}
+                            onChange={(v) => onChange(["watermark"], v)}
+                        />
+                        <Toggle
+                            name="Purge"
+                            desc="생성 전 모듈 폴더 비우기"
+                            checked={profile.purge}
+                            onChange={(v) => onChange(["purge"], v)}
+                        />
+                        <Toggle
+                            name="Oauth Inter Server"
+                            desc="내부 서버 간 Oauth 확인"
+                            checked={profile.oauthInterServer}
+                            onChange={(v) => onChange(["oauthInterServer"], v)}
+                        />
 
-                        <Field label="Watermark">
-                            <Toggle
-                                name="Watermark"
-                                desc="생성 시각 주석 삽입"
-                                checked={profile.watermark}
-                                onChange={(v) => onChange(["watermark"], v)}
-                            />
-                        </Field>
-
-                        <Field label="Purge">
-                            <Toggle
-                                name="Purge"
-                                desc="생성 전 모듈 폴더 비우기"
-                                checked={profile.purge}
-                                onChange={(v) => onChange(["purge"], v)}
-                            />
-                        </Field>
-
-                        <Field label="Serverly Authentication">
-                            <Toggle
-                                name="Oauth Inter Server"
-                                desc="내부 서버 간 Oauth 확인"
-                                checked={profile.oauthInterServer}
-                                onChange={(v) => onChange(["oauthInterServer"], v)}
-                            />
-                        </Field>
                     </div>
 
                     {profile.purge === true && (

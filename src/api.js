@@ -1,5 +1,5 @@
 import axios from "axios";
-const baseUrl = "http://localhost:8080/admin/v1/";
+const baseUrl = "http://localhost:8080/generator/v1/";
 const api = axios.create({ baseURL: baseUrl, timeout: 50000, });
 
 export async function fetchProfiles() {
